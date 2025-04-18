@@ -1,6 +1,13 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FaTimes, FaUtensils, FaUser, FaStickyNote, FaMoneyBillWave, FaMoneyBill } from 'react-icons/fa';
+import {
+  FaTimes,
+  FaUtensils,
+  FaUser,
+  FaStickyNote,
+  FaMoneyBillWave,
+  FaMoneyBill,
+} from 'react-icons/fa';
 import { OrderItem } from '@/types/table';
 import { ExtendedOrder } from '../Tables';
 

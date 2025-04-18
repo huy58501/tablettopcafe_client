@@ -58,7 +58,7 @@ export async function POST(req: Request) {
     // Get the response data from PHP backend (which includes success/failure info)
     const data = await response.json();
     console.log('🔵 Backend response:', { success: data.success, message: data.message });
-    
+
     // If login is successful, create JWT token
     if (data.success) {
       const token = data.token;

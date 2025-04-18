@@ -538,7 +538,9 @@ const OrderModal: React.FC<OrderModalProps> = ({
             <div className="border-t border-gray-200 p-4 bg-white">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-lg font-medium text-gray-700">Total</span>
-                <span className="text-2xl font-bold text-gray-900">{formatCurrency(order.total)}</span>
+                <span className="text-2xl font-bold text-gray-900">
+                  {formatCurrency(order.total)}
+                </span>
               </div>
 
               <div className="flex gap-3">

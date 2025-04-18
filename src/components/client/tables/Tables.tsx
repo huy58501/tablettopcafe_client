@@ -70,7 +70,7 @@ const Tables: React.FC<TablesProps> = ({ onTableSelect }) => {
             : null,
       }));
       setTables(mappedTables);
-      
+
       // Group tables by room and sort by ID
       const groupedTables: TablesByRoom = {};
       mappedTables.forEach((table: TableWithOrders) => {
@@ -207,8 +207,8 @@ const Tables: React.FC<TablesProps> = ({ onTableSelect }) => {
               status: 'occupied',
               orders: {
                 ...order,
-                orderItems: order.orderItems || []
-              }
+                orderItems: order.orderItems || [],
+              },
             }
           : table
       )
@@ -225,8 +225,8 @@ const Tables: React.FC<TablesProps> = ({ onTableSelect }) => {
                 status: 'occupied',
                 orders: {
                   ...order,
-                  orderItems: order.orderItems || []
-                }
+                  orderItems: order.orderItems || [],
+                },
               }
             : table
         );
@@ -304,7 +304,7 @@ const Tables: React.FC<TablesProps> = ({ onTableSelect }) => {
             <div className="flex items-center mb-4">
               <h2 className="text-xl font-semibold text-gray-800">Room: {room}</h2>
             </div>
-            
+
             <motion.div
               className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4"
               initial={{ opacity: 0 }}
@@ -329,7 +329,9 @@ const Tables: React.FC<TablesProps> = ({ onTableSelect }) => {
                   >
                     <div>
                       <div className="flex justify-between items-start mb-3">
-                        <h3 className="text-lg md:text-xl font-bold text-gray-800">{table.number}</h3>
+                        <h3 className="text-lg md:text-xl font-bold text-gray-800">
+                          {table.number}
+                        </h3>
                         <div className="text-xl md:text-2xl">{statusInfo.icon}</div>
                       </div>
 
