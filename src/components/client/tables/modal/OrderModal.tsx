@@ -47,8 +47,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
     total: existingOrder?.total || 0,
     createdAt: existingOrder?.createdAt || new Date().toISOString(),
     orderItems: existingOrder?.orderItems || [],
-    customerName: existingOrder?.customerName || '',
-    customerNote: existingOrder?.customerNote || '',
+    tableId: existingOrder?.tableId || 0,
   });
 
   const [selectedMenuItem, setSelectedMenuItem] = useState<string>('');
@@ -76,6 +75,11 @@ const OrderModal: React.FC<OrderModalProps> = ({
       setOrder(existingOrder);
     }
   }, [existingOrder]);
+
+  // Format currency to VND with thousands separators
+  const formatCurrency = (amount: number) => {
+    return `VND: ${amount.toLocaleString('vi-VN')}`;
+  };
 
   const handleAddOrUpdateItem = (menuItem: { id: string; name: string; price: number }) => {
     const existingItemIndex = order.orderItems.findIndex(
@@ -183,19 +187,20 @@ const OrderModal: React.FC<OrderModalProps> = ({
         dishId: item.dish.id,
         quantity: item.quantity,
         price: item.price,
+        notes: item.notes || '',
       }));
 
       const now = new Date();
       const createBookingRes = await createBooking({
         variables: {
-          customerName: order.customerName || 'Guest',
+          customerName: 'Guest',
           phoneNumber: '0000000000',
           reservationDate: now.toISOString().split('T')[0],
           startSlotId: getNextSlotId(),
           durationSlots: 6,
           peopleCount: peopleCount || 1,
           bookingType: 'dine-in',
-          customerNote: order.customerNote || '',
+          customerNote: '',
           tableId: tableId,
         },
       });
@@ -337,7 +342,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
                         <div className="text-sm font-medium text-gray-800 text-center">
                           {dish.name}
                         </div>
-                        <div className="text-sm text-gray-500">${dish.price.toFixed(2)}</div>
+                        <div className="text-sm text-gray-500">{formatCurrency(dish.price)}</div>
                       </button>
                     ))}
                   </div>
@@ -372,7 +377,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
                     </div>
                     <div className="flex items-center space-x-3">
                       <span className="text-gray-800">
-                        ${(item.price * item.quantity).toFixed(2)}
+                        {formatCurrency(item.price * item.quantity)}
                       </span>
                       <button
                         onClick={() => handleRemoveItem(item.id)}
@@ -388,7 +393,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
               <div className="p-4 border-t border-gray-100">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-lg font-medium">Total</span>
-                  <span className="text-xl font-bold">${order.total.toFixed(2)}</span>
+                  <span className="text-xl font-bold">{formatCurrency(order.total)}</span>
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -417,6 +422,16 @@ const OrderModal: React.FC<OrderModalProps> = ({
               </div>
             </div>
           )}
+
+          {/* Note Field for Mobile - Always visible */}
+          <div className="border-t border-gray-100 bg-white p-4">
+            <div className="flex items-center mb-2">
+              <span className="text-sm font-medium text-gray-700">Item Notes</span>
+            </div>
+            <p className="text-sm text-gray-500 mb-2">
+              Add notes to individual items in your order above.
+            </p>
+          </div>
         </div>
 
         {/* Desktop Layout */}
@@ -450,7 +465,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
                           {dish.image}
                         </div>
                         <div className="font-medium text-gray-800">{dish.name}</div>
-                        <div className="text-gray-500">${dish.price.toFixed(2)}</div>
+                        <div className="text-gray-500">{formatCurrency(dish.price)}</div>
                       </button>
                     ))}
                   </div>
@@ -473,7 +488,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
                       <div className="flex items-center justify-between">
                         <span className="font-medium text-gray-800 truncate">{item.dish.name}</span>
                         <span className="font-medium text-gray-800">
-                          ${(item.price * item.quantity).toFixed(2)}
+                          {formatCurrency(item.price * item.quantity)}
                         </span>
                       </div>
 
@@ -505,7 +520,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
 
                       <input
                         type="text"
-                        placeholder="Add notes..."
+                        placeholder="Add notes for this item..."
                         value={item.notes}
                         onChange={e => handleUpdateNotes(item.id, e.target.value)}
                         className="w-full p-2 text-sm bg-gray-50 border border-gray-200 
@@ -523,7 +538,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
             <div className="border-t border-gray-200 p-4 bg-white">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-lg font-medium text-gray-700">Total</span>
-                <span className="text-2xl font-bold text-gray-900">${order.total.toFixed(2)}</span>
+                <span className="text-2xl font-bold text-gray-900">{formatCurrency(order.total)}</span>
               </div>
 
               <div className="flex gap-3">

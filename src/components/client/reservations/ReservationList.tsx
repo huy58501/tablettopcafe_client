@@ -63,7 +63,7 @@ const ReservationList: React.FC<ReservationListProps> = ({
   };
 
   // Get status icon
-  const getStatusIcon = (status: ReservationStatus): JSX.Element => {
+  const getStatusIcon = (status: ReservationStatus): React.ReactElement => {
     switch (status) {
       case 'pending':
         return (

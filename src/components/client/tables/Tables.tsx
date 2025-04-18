@@ -1,6 +1,7 @@
 import { Table, Order, OrderItem } from '@/types/table';
 import OrderModal from './modal/OrderModal';
 import OrderDetails from './modal/OrderDetails';
+import SplitBill from './modal/SplitBill';
 import { motion } from 'framer-motion';
 import {
   FaUsers,
@@ -10,6 +11,7 @@ import {
   FaExclamationCircle,
   FaArrowLeft,
   FaMoneyBill,
+  FaDoorOpen,
 } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
 import { useTables } from '@/hooks/useTable';
@@ -22,6 +24,7 @@ interface TablesProps {
 // Extended Table type to include orders
 interface TableWithOrders extends Table {
   orders: ExtendedOrder | null;
+  room?: string;
 }
 
 // Extended Order type to include additional properties needed for the UI
@@ -31,18 +34,29 @@ export interface ExtendedOrder extends Order {
   customerNote?: string;
 }
 
+// Group tables by room
+interface TablesByRoom {
+  [room: string]: TableWithOrders[];
+}
+
 const Tables: React.FC<TablesProps> = ({ onTableSelect }) => {
   const [tables, setTables] = useState<TableWithOrders[]>([]);
+  const [tablesByRoom, setTablesByRoom] = useState<TablesByRoom>({});
   const [selectedTable, setSelectedTable] = useState<TableWithOrders | null>(null);
   // Modal states
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [isPeopleCountModalOpen, setIsPeopleCountModalOpen] = useState(false);
   const [isOrderDetailsOpen, setIsOrderDetailsOpen] = useState(false);
+  const [isSplitBillOpen, setIsSplitBillOpen] = useState(false);
 
   const [peopleCount, setPeopleCount] = useState<number>(1);
   const [tempPeopleCount, setTempPeopleCount] = useState<string>('1');
 
   const { data: tablesData, loading: tablesLoading } = useTables();
+  // Format currency to VND with thousands separators
+  const formatCurrency = (amount: number) => {
+    return `VND: ${amount.toLocaleString('vi-VN')}`;
+  };
 
   useEffect(() => {
     if (tablesData) {
@@ -56,14 +70,38 @@ const Tables: React.FC<TablesProps> = ({ onTableSelect }) => {
             : null,
       }));
       setTables(mappedTables);
+      
+      // Group tables by room and sort by ID
+      const groupedTables: TablesByRoom = {};
+      mappedTables.forEach((table: TableWithOrders) => {
+        const room = table.room || 'Main Area';
+        if (!groupedTables[room]) {
+          groupedTables[room] = [];
+        }
+        groupedTables[room].push(table);
+      });
+
+      // Sort tables by ID within each room
+      Object.keys(groupedTables).forEach(room => {
+        groupedTables[room].sort((a, b) => a.id - b.id);
+      });
+
+      setTablesByRoom(groupedTables);
+
+      // Debug log
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Mapped Tables:', mappedTables);
+      }
     }
   }, [tablesData]);
 
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
+      console.log('tablesData: ', tablesData);
       console.warn('tables data:', tables);
+      console.warn('tables by room:', tablesByRoom);
     }
-  }, [tables]);
+  }, [tables, tablesByRoom]);
 
   const handleTableClick = (table: TableWithOrders) => {
     setSelectedTable(table);
@@ -163,9 +201,43 @@ const Tables: React.FC<TablesProps> = ({ onTableSelect }) => {
     // Update the tables state with the new order
     setTables(prevTables =>
       prevTables.map(table =>
-        table.id === id ? { ...table, orders: order, status: 'occupied' } : table
+        table.id === id
+          ? {
+              ...table,
+              status: 'occupied',
+              orders: {
+                ...order,
+                orderItems: order.orderItems || []
+              }
+            }
+          : table
       )
     );
+
+    // Update tablesByRoom state while preserving table order within each room
+    setTablesByRoom(prevTablesByRoom => {
+      const newTablesByRoom = { ...prevTablesByRoom };
+      Object.keys(newTablesByRoom).forEach(room => {
+        newTablesByRoom[room] = [...newTablesByRoom[room]].map(table =>
+          table.id === id
+            ? {
+                ...table,
+                status: 'occupied',
+                orders: {
+                  ...order,
+                  orderItems: order.orderItems || []
+                }
+              }
+            : table
+        );
+      });
+      return newTablesByRoom;
+    });
+
+    // Debug log
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Updated order:', order);
+    }
 
     // Close the order modal
     setIsOrderModalOpen(false);
@@ -181,8 +253,17 @@ const Tables: React.FC<TablesProps> = ({ onTableSelect }) => {
         setIsPeopleCountModalOpen(false);
       } else if (isOrderDetailsOpen) {
         setIsOrderDetailsOpen(false);
+      } else if (isSplitBillOpen) {
+        setIsSplitBillOpen(false);
       }
     }
+  };
+
+  const handleSplitBill = (splitData: any) => {
+    // Here you can handle the split bill data
+    console.log('Split bill data:', splitData);
+    setIsSplitBillOpen(false);
+    // You can add your logic here to update the order or handle the payment
   };
 
   return (
@@ -217,65 +298,74 @@ const Tables: React.FC<TablesProps> = ({ onTableSelect }) => {
           </div>
         </div>
 
-        <motion.div
-          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5 }}
-        >
-          {tables.map((table, index) => {
-            const statusInfo = getTableStatusInfo(table.status);
-            return (
-              <motion.div
-                key={table.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.05 }}
-                onClick={() => handleTableClick(table)}
-                className={`
-                  ${statusInfo.color} ${statusInfo.hoverColor} ${statusInfo.borderColor}
-                  p-4 md:p-5 rounded-xl border-2 cursor-pointer transform transition-all duration-200
-                  hover:scale-105 hover:shadow-lg active:scale-95
-                  flex flex-col justify-between min-h-[140px] md:min-h-[160px]
-                `}
-              >
-                <div>
-                  <div className="flex justify-between items-start mb-3">
-                    <h3 className="text-lg md:text-xl font-bold text-gray-800">{table.number}</h3>
-                    <div className="text-xl md:text-2xl">{statusInfo.icon}</div>
-                  </div>
+        {/* Display tables grouped by room */}
+        {Object.entries(tablesByRoom).map(([room, roomTables], roomIndex) => (
+          <div key={room} className="mb-8">
+            <div className="flex items-center mb-4">
+              <h2 className="text-xl font-semibold text-gray-800">Room: {room}</h2>
+            </div>
+            
+            <motion.div
+              className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: roomIndex * 0.1 }}
+            >
+              {roomTables.map((table, index) => {
+                const statusInfo = getTableStatusInfo(table.status);
+                return (
+                  <motion.div
+                    key={table.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                    onClick={() => handleTableClick(table)}
+                    className={`
+                      ${statusInfo.color} ${statusInfo.hoverColor} ${statusInfo.borderColor}
+                      p-4 md:p-5 rounded-xl border-2 cursor-pointer transform transition-all duration-200
+                      hover:scale-105 hover:shadow-lg active:scale-95
+                      flex flex-col justify-between min-h-[140px] md:min-h-[160px]
+                    `}
+                  >
+                    <div>
+                      <div className="flex justify-between items-start mb-3">
+                        <h3 className="text-lg md:text-xl font-bold text-gray-800">{table.number}</h3>
+                        <div className="text-xl md:text-2xl">{statusInfo.icon}</div>
+                      </div>
 
-                  <div className="space-y-1 md:space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <FaUsers className="text-gray-500" />
-                      <span className="text-sm md:text-base text-gray-600">
-                        Capacity: {table.capacity}
-                      </span>
+                      <div className="space-y-1 md:space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <FaUsers className="text-gray-500" />
+                          <span className="text-sm md:text-base text-gray-600">
+                            Capacity: {table.capacity}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <FaUtensils className="text-gray-500" />
+                          <span className="text-sm md:text-base text-gray-600">
+                            Orders: {table.orders?.orderItems?.length || 0}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <FaMoneyBill className="text-gray-500" />
+                          <span className="text-sm md:text-base text-gray-600">
+                            Total: {formatCurrency(table.orders?.total || 0)}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <FaUtensils className="text-gray-500" />
-                      <span className="text-sm md:text-base text-gray-600">
-                        Orders: {table.orders?.orderItems.length || 0}
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <FaMoneyBill className="text-gray-500" />
-                      <span className="text-sm md:text-base text-gray-600">
-                        Total: ${table.orders?.total?.toFixed(2) || '0.00'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
 
-                <div className="mt-3 pt-3 border-t border-gray-200">
-                  <span className={`text-sm font-medium ${statusInfo.textColor}`}>
-                    {table.status.charAt(0).toUpperCase() + table.status.slice(1)}
-                  </span>
-                </div>
-              </motion.div>
-            );
-          })}
-        </motion.div>
+                    <div className="mt-3 pt-3 border-t border-gray-200">
+                      <span className={`text-sm font-medium ${statusInfo.textColor}`}>
+                        {table.status.charAt(0).toUpperCase() + table.status.slice(1)}
+                      </span>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </motion.div>
+          </div>
+        ))}
 
         {/* People Count Modal */}
         {isPeopleCountModalOpen && selectedTable && (
@@ -420,8 +510,22 @@ const Tables: React.FC<TablesProps> = ({ onTableSelect }) => {
             <OrderDetails
               order={selectedTable.orders}
               onClose={() => setIsOrderDetailsOpen(false)}
+              onSplitBill={() => {
+                setIsOrderDetailsOpen(false);
+                setIsSplitBillOpen(true);
+              }}
             />
           </div>
+        )}
+
+        {/* Split Bill Modal */}
+        {isSplitBillOpen && selectedTable && selectedTable.orders && (
+          <SplitBill
+            isOpen={isSplitBillOpen}
+            onClose={() => setIsSplitBillOpen(false)}
+            order={selectedTable.orders}
+            onConfirm={handleSplitBill}
+          />
         )}
       </div>
     </div>

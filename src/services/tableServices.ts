@@ -7,6 +7,7 @@ export const GET_ALL_TABLES = gql`
       number
       capacity
       status
+      room
       createdAt
       bookings {
         id

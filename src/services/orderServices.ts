@@ -33,6 +33,7 @@ export const CREATE_ORDER = gql`
         id
         quantity
         price
+        notes
         dish {
           id
           name
