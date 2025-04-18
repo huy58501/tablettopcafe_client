@@ -51,7 +51,8 @@ const Tables: React.FC<TablesProps> = ({ onTableSelect }) => {
 
   const [peopleCount, setPeopleCount] = useState<number>(1);
   const [tempPeopleCount, setTempPeopleCount] = useState<string>('1');
-
+  const [splitBillData, setSplitBillData] = useState<any>(null);
+  const [totalBill, setTotalBill] = useState<number>(0);
   const { data: tablesData, loading: tablesLoading } = useTables();
   // Format currency to VND with thousands separators
   const formatCurrency = (amount: number) => {
@@ -70,6 +71,7 @@ const Tables: React.FC<TablesProps> = ({ onTableSelect }) => {
             : null,
       }));
       setTables(mappedTables);
+      setTotalBill(mappedTables.reduce((acc: number, table: TableWithOrders) => acc + (table.orders?.total || 0), 0));
 
       // Group tables by room and sort by ID
       const groupedTables: TablesByRoom = {};
@@ -261,8 +263,20 @@ const Tables: React.FC<TablesProps> = ({ onTableSelect }) => {
 
   const handleSplitBill = (splitData: any) => {
     // Here you can handle the split bill data
-    console.log('Split bill data:', splitData);
     setIsSplitBillOpen(false);
+    const splitBillData = splitData.splits.map((item: any) => ({
+      ...item,
+      total: item.total,
+    }));
+    let splitTotal = 0;
+    splitBillData.forEach((item: any) => {
+      splitTotal += item.total;
+    });
+    if (splitTotal === totalBill) {
+      console.log('Split bill data is correct');
+    } else {
+      console.log('Split bill data is incorrect');
+    }
     // You can add your logic here to update the order or handle the payment
   };
 

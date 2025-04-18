@@ -44,26 +44,26 @@ export const GET_ALL_TABLES = gql`
   }
 `;
 
-export const CREATE_ORDER = gql`
-  mutation CreateOrder($bookingId: Int!, $orderItems: [OrderItemInput!]!) {
-    createOrder(bookingId: $bookingId, orderItems: $orderItems) {
-      id
-      status
-      total
-      createdAt
-      orderItems {
-        id
-        quantity
-        price
-        dish {
-          id
-          name
-          price
-        }
-      }
-    }
-  }
-`;
+// export const CREATE_ORDER = gql`
+//   mutation CreateOrder($bookingId: Int!, $orderItems: [OrderItemInput!]!) {
+//     createOrder(bookingId: $bookingId, orderItems: $orderItems) {
+//       id
+//       status
+//       total
+//       createdAt
+//       orderItems {
+//         id
+//         quantity
+//         price
+//         dish {
+//           id
+//           name
+//           price
+//         }
+//       }
+//     }
+//   }
+// `;
 
 export const UPDATE_TABLE_STATUS = gql`
   mutation UpdateTableStatus($tableId: Int!, $status: String!) {

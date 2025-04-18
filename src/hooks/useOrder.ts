@@ -1,13 +1,12 @@
 import { useMutation, useQuery } from '@apollo/client';
-import { GET_ORDERS, UPDATE_ORDER_STATUS } from '@/services/orderServices';
+import { GET_ORDERS, UPDATE_ORDER_STATUS, UPDATE_ORDER_PAYMENT } from '@/services/orderServices';
 
 export const useUpdateOrderStatus = () => {
   const [updateOrderStatus, { loading, error }] = useMutation(UPDATE_ORDER_STATUS);
+  const [updateOrderPayment, { loading: paymentLoading, error: paymentError }] = useMutation(UPDATE_ORDER_PAYMENT);
   const { data: orders, loading: ordersLoading, error: ordersError } = useQuery(GET_ORDERS);
 
   const handleUpdateOrderStatus = async (id: number, status: string) => {
-    console.log('handleUpdateOrderStatus id', id);
-    console.log('handleUpdateOrderStatus status', status);
     try {
       await updateOrderStatus({ variables: { orderId: id, status } });
     } catch (error) {
@@ -15,13 +14,25 @@ export const useUpdateOrderStatus = () => {
     }
   };
 
+  const handleUpdateOrderPayment = async (id: number, payment: string) => {
+    try {
+      await updateOrderPayment({ variables: { orderId: id, payment } });
+    } catch (error) {
+      console.error('Error updating order payment:', error);
+    }
+  };
+
   return {
     updateOrderStatus,
     handleUpdateOrderStatus,
+    updateOrderPayment,
+    handleUpdateOrderPayment,
     loading,
     error,
     orders,
     ordersLoading,
     ordersError,
+    paymentLoading,
+    paymentError,
   };
 };
