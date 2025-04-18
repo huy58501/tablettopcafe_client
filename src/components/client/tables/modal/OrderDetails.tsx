@@ -122,7 +122,9 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onClose, onSplitBill
                     <span className="text-gray-700">{item.quantity}x </span>
                     <span className="text-gray-600">{item.notes || 'No notes'}</span>
                   </div>
-                  <span className="text-gray-700">{formatCurrency(item.price * item.quantity)}</span>
+                  <span className="text-gray-700">
+                    {formatCurrency(item.price * item.quantity)}
+                  </span>
                 </div>
               ))}
             </div>

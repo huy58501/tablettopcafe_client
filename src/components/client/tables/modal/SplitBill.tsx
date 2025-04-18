@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FaMoneyBill, FaCheck, FaTimes, FaArrowRight, FaArrowLeft, FaPlus, FaCreditCard } from 'react-icons/fa';
+import {
+  FaMoneyBill,
+  FaCheck,
+  FaTimes,
+  FaArrowRight,
+  FaArrowLeft,
+  FaPlus,
+  FaCreditCard,
+} from 'react-icons/fa';
 import { ExtendedOrder } from '../Tables';
 import QRPayment from './QRPayment';
 
@@ -145,7 +153,7 @@ const SplitBill: React.FC<SplitBillProps> = ({ isOpen, onClose, order, onConfirm
   };
 
   const handleSplitConfirm = () => {
-    console.log("paymentCompleted", paymentCompleted);
+    console.log('paymentCompleted', paymentCompleted);
     if (!paymentCompleted) {
       // Show QR payment modal first
       handlePayment(bill2Total, `Table ${order.tableId} - Split ${splitStep}`);
@@ -179,7 +187,6 @@ const SplitBill: React.FC<SplitBillProps> = ({ isOpen, onClose, order, onConfirm
     setShowQRPayment(false);
     setPaymentCompleted(true);
     if (bill2Items.length > 0) {
-        
       // Store current split
       const newSplit: SplitBillState = {
         items: bill2Items,
@@ -215,8 +222,9 @@ const SplitBill: React.FC<SplitBillProps> = ({ isOpen, onClose, order, onConfirm
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`bg-white rounded-lg p-4 shadow-sm border border-gray-200 hover:border-blue-300 transition-colors cursor-pointer ${direction === 'right' ? 'hover:bg-blue-50' : 'hover:bg-gray-50'
-        }`}
+      className={`bg-white rounded-lg p-4 shadow-sm border border-gray-200 hover:border-blue-300 transition-colors cursor-pointer ${
+        direction === 'right' ? 'hover:bg-blue-50' : 'hover:bg-gray-50'
+      }`}
       onClick={onMove}
     >
       <div className="flex justify-between items-center">
@@ -234,10 +242,9 @@ const SplitBill: React.FC<SplitBillProps> = ({ isOpen, onClose, order, onConfirm
           </div>
         </div>
         <div
-          className={`ml-4 p-2 rounded-full ${direction === 'right'
-              ? 'bg-blue-50 text-blue-600'
-              : 'bg-gray-50 text-gray-600'
-            }`}
+          className={`ml-4 p-2 rounded-full ${
+            direction === 'right' ? 'bg-blue-50 text-blue-600' : 'bg-gray-50 text-gray-600'
+          }`}
         >
           {direction === 'right' ? <FaArrowRight /> : <FaArrowLeft />}
         </div>
@@ -261,10 +268,10 @@ const SplitBill: React.FC<SplitBillProps> = ({ isOpen, onClose, order, onConfirm
           className="bg-white rounded-2xl w-full max-w-[1000px] shadow-2xl overflow-hidden"
         >
           {/* Header */}
-          <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+          <div className="bg-gray-50 px-4 md:px-6 py-4 border-b border-gray-200">
             <div className="flex justify-between items-center">
               <div>
-                <h2 className="text-xl font-semibold text-gray-800">Split Bill</h2>
+                <h2 className="text-lg md:text-xl font-semibold text-gray-800">Split Bill</h2>
                 <p className="text-sm text-gray-600 mt-1">
                   Step {splitStep}{' '}
                   {completedSplits.length > 0 && `• ${completedSplits.length} split(s) completed`}
@@ -280,18 +287,22 @@ const SplitBill: React.FC<SplitBillProps> = ({ isOpen, onClose, order, onConfirm
           </div>
 
           {/* Content */}
-          <div className="p-6">
-            <div className="flex gap-6">
+          <div className="p-4 md:p-6">
+            <div className="flex flex-col md:flex-row gap-4 md:gap-6">
               {/* Bill 1 */}
               <div className="flex-1">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-medium text-gray-700">Remaining Items</h3>
-                  <span className="text-lg font-semibold text-blue-600">
+                  <h3 className="text-base md:text-lg font-medium text-gray-700">
+                    Remaining Items
+                  </h3>
+                  <span className="text-base md:text-lg font-semibold text-blue-600">
                     {formatCurrency(bill1Total)}
                   </span>
                 </div>
-                <p className="text-sm text-gray-500 mb-3">Click on any item to move it to Split {splitStep}</p>
-                <div className="space-y-3 max-h-[500px] overflow-y-auto">
+                <p className="text-xs md:text-sm text-gray-500 mb-3">
+                  Click on any item to move it to Split {splitStep}
+                </p>
+                <div className="space-y-2 md:space-y-3 max-h-[300px] md:max-h-[500px] overflow-y-auto">
                   {bill1Items.map(item => (
                     <BillItem
                       key={item.id}
@@ -306,13 +317,17 @@ const SplitBill: React.FC<SplitBillProps> = ({ isOpen, onClose, order, onConfirm
               {/* Bill 2 */}
               <div className="flex-1">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-medium text-gray-700">Split {splitStep}</h3>
-                  <span className="text-lg font-semibold text-blue-600">
+                  <h3 className="text-base md:text-lg font-medium text-gray-700">
+                    Split {splitStep}
+                  </h3>
+                  <span className="text-base md:text-lg font-semibold text-blue-600">
                     {formatCurrency(bill2Total)}
                   </span>
                 </div>
-                <p className="text-sm text-gray-500 mb-3">Click on any item to move it back to Remaining Items</p>
-                <div className="space-y-3 max-h-[500px] overflow-y-auto">
+                <p className="text-xs md:text-sm text-gray-500 mb-3">
+                  Click on any item to move it back to Remaining Items
+                </p>
+                <div className="space-y-2 md:space-y-3 max-h-[300px] md:max-h-[500px] overflow-y-auto">
                   {bill2Items.map(item => (
                     <BillItem
                       key={item.id}
@@ -327,13 +342,17 @@ const SplitBill: React.FC<SplitBillProps> = ({ isOpen, onClose, order, onConfirm
 
             {/* Completed Splits Summary */}
             {completedSplits.length > 0 && (
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <h3 className="text-lg font-medium text-gray-700 mb-3">Completed Splits</h3>
-                <div className="flex flex-wrap gap-3">
+              <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-gray-200">
+                <h3 className="text-base md:text-lg font-medium text-gray-700 mb-3">
+                  Completed Splits
+                </h3>
+                <div className="flex flex-wrap gap-2 md:gap-3">
                   {completedSplits.map((split, index) => (
-                    <div key={index} className="bg-gray-50 rounded-lg p-3">
+                    <div key={index} className="bg-gray-50 rounded-lg p-2 md:p-3">
                       <div className="font-medium text-gray-700">Split {index + 1}</div>
-                      <div className="text-sm text-gray-600">{formatCurrency(split.total)}</div>
+                      <div className="text-xs md:text-sm text-gray-600">
+                        {formatCurrency(split.total)}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -341,20 +360,20 @@ const SplitBill: React.FC<SplitBillProps> = ({ isOpen, onClose, order, onConfirm
             )}
 
             {/* Action Buttons */}
-            <div className="flex gap-3 mt-6 pt-6 border-t border-gray-200">
+            <div className="flex gap-2 md:gap-3 mt-4 md:mt-6 pt-4 md:pt-6 border-t border-gray-200">
               <button
                 onClick={handleCancel}
-                className="flex-1 py-3.5 px-4 border-2 border-gray-200 text-gray-700 font-medium 
-                         rounded-xl hover:bg-gray-50 transition-colors"
+                className="flex-1 py-2.5 md:py-3.5 px-3 md:px-4 border-2 border-gray-200 text-gray-700 font-medium 
+                         rounded-xl hover:bg-gray-50 transition-colors text-sm md:text-base"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSplitConfirm}
                 disabled={bill2Items.length === 0}
-                className="flex-1 py-3.5 px-4 bg-blue-600 text-white font-medium 
+                className="flex-1 py-2.5 md:py-3.5 px-3 md:px-4 bg-blue-600 text-white font-medium 
                          rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 
-                         disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                         disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm md:text-base"
               >
                 <FaCheck className="text-sm" />
                 <span>
@@ -364,8 +383,11 @@ const SplitBill: React.FC<SplitBillProps> = ({ isOpen, onClose, order, onConfirm
             </div>
 
             {/* Instructions */}
-            <div className="mt-4 text-center text-sm text-gray-500">
-              <p>💡 <span className="font-medium">Tip:</span> Click on any item to move it between bills</p>
+            <div className="mt-3 md:mt-4 text-center text-xs md:text-sm text-gray-500">
+              <p>
+                💡 <span className="font-medium">Tip:</span> Click on any item to move it between
+                bills
+              </p>
             </div>
           </div>
         </motion.div>

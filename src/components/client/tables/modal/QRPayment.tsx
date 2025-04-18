@@ -41,7 +41,7 @@ const QRPayment: React.FC<QRPaymentProps> = ({
     // Convert the clicked number to string
     const newValue = tempCashAmount + num.toString();
     setTempCashAmount(newValue);
-    
+
     // Update cashAmount if it's a valid number
     const parsedValue = parseInt(newValue);
     if (!isNaN(parsedValue)) {
@@ -58,7 +58,7 @@ const QRPayment: React.FC<QRPaymentProps> = ({
     // Remove the last digit
     const newValue = tempCashAmount.slice(0, -1);
     setTempCashAmount(newValue);
-    
+
     // Update cashAmount
     const parsedValue = parseInt(newValue);
     if (!isNaN(parsedValue)) {
@@ -97,7 +97,11 @@ const QRPayment: React.FC<QRPaymentProps> = ({
         <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold text-gray-800">
-              {paymentMethod === 'qr' ? 'QR Payment' : paymentMethod === 'cash' ? 'Cash Payment' : 'Payment Options'}
+              {paymentMethod === 'qr'
+                ? 'QR Payment'
+                : paymentMethod === 'cash'
+                  ? 'Cash Payment'
+                  : 'Payment Options'}
             </h2>
             <button
               onClick={onClose}
@@ -112,11 +116,9 @@ const QRPayment: React.FC<QRPaymentProps> = ({
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
             <h4 className="text-lg font-medium text-gray-700">Total Amount</h4>
-            <span className="text-xl font-bold text-blue-600">
-              {formatCurrency(amount)}
-            </span>
+            <span className="text-xl font-bold text-blue-600">{formatCurrency(amount)}</span>
           </div>
-          
+
           {!paymentMethod ? (
             // Payment Method Selection
             <div className="space-y-4 my-6">
@@ -142,14 +144,10 @@ const QRPayment: React.FC<QRPaymentProps> = ({
             <>
               <div className="flex justify-center my-6">
                 <div className="bg-gray-100 p-4 rounded-lg">
-                  <img 
-                    src="/images/qr-code.png" 
-                    alt="QR Payment Code" 
-                    className="w-48 h-48"
-                  />
+                  <img src="/images/qr-code.png" alt="QR Payment Code" className="w-48 h-48" />
                 </div>
               </div>
-              
+
               <div className="space-y-2 mb-6">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Bank:</span>
@@ -168,7 +166,7 @@ const QRPayment: React.FC<QRPaymentProps> = ({
                   <span className="font-medium">{reference || `Table ${tableId}`}</span>
                 </div>
               </div>
-              
+
               <div className="text-sm text-gray-500 text-center mb-6">
                 Scan the QR code with your banking app to complete the payment
               </div>
@@ -186,17 +184,19 @@ const QRPayment: React.FC<QRPaymentProps> = ({
                     <p className="text-sm">Enter amount paid</p>
                   </div>
                 </div>
-                
+
                 {parseInt(cashAmount) > amount && (
                   <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
                     <div className="flex justify-between items-center">
                       <span className="text-green-700 font-medium">Change:</span>
-                      <span className="text-green-700 font-bold">{formatCurrency(calculateChange())}</span>
+                      <span className="text-green-700 font-bold">
+                        {formatCurrency(calculateChange())}
+                      </span>
                     </div>
                   </div>
                 )}
               </div>
-              
+
               {/* Number Pad */}
               <div className="grid grid-cols-3 gap-3 mb-6">
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
@@ -237,7 +237,7 @@ const QRPayment: React.FC<QRPaymentProps> = ({
               </div>
             </>
           )}
-          
+
           <div className="flex gap-3">
             {paymentMethod && (
               <button
@@ -273,4 +273,4 @@ const QRPayment: React.FC<QRPaymentProps> = ({
   );
 };
 
-export default QRPayment; 
+export default QRPayment;

@@ -16,6 +16,30 @@ interface MenuItem {
 const Sidebar: React.FC<NavbarProps> = ({ title, menuItems }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [error, setError] = useState('');
+  const [isVisible, setIsVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  // Handle scroll direction
+  useEffect(() => {
+    const controlNavbar = () => {
+      if (typeof window !== 'undefined') {
+        const currentScrollY = window.scrollY;
+
+        if (currentScrollY > lastScrollY) {
+          // Scrolling down
+          setIsVisible(false);
+        } else {
+          // Scrolling up
+          setIsVisible(true);
+        }
+
+        setLastScrollY(currentScrollY);
+      }
+    };
+
+    window.addEventListener('scroll', controlNavbar);
+    return () => window.removeEventListener('scroll', controlNavbar);
+  }, [lastScrollY]);
 
   // Close mobile menu when screen size changes
   useEffect(() => {
@@ -37,12 +61,17 @@ const Sidebar: React.FC<NavbarProps> = ({ title, menuItems }) => {
     }
   };
 
+  const handleLinkClick = () => {
+    setIsMobileMenuOpen(false);
+  };
+
   const SidebarContent = () => (
     <nav className="space-y-2">
       {menuItems.map(item => (
         <Link
           key={item.label}
           href={item.href}
+          onClick={handleLinkClick}
           className="flex items-center space-x-2 px-4 py-2.5 rounded-lg text-gray-400 hover:bg-slate-800 hover:text-white transition-colors"
         >
           <span>{item.label}</span>
@@ -61,7 +90,11 @@ const Sidebar: React.FC<NavbarProps> = ({ title, menuItems }) => {
   return (
     <>
       {/* Mobile Header */}
-      <div className="md:hidden bg-slate-950 text-white px-6 py-5 flex items-center justify-between fixed top-0 left-0 right-0 z-50 shadow-lg">
+      <div
+        className={`md:hidden bg-slate-950 text-white px-6 py-5 flex items-center justify-between fixed top-0 left-0 right-0 z-50 shadow-lg transition-transform duration-300 ${
+          isVisible ? 'translate-y-0' : '-translate-y-full'
+        }`}
+      >
         <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -74,7 +107,7 @@ const Sidebar: React.FC<NavbarProps> = ({ title, menuItems }) => {
       {/* Mobile Menu */}
       <div
         className={`md:hidden fixed inset-0 bg-slate-950/95 backdrop-blur-sm transition-all duration-300 z-40 ${
-          isMobileMenuOpen
+          isMobileMenuOpen && isVisible
             ? 'opacity-100 translate-x-0'
             : 'opacity-0 translate-x-full pointer-events-none'
         }`}

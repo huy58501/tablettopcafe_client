@@ -3,7 +3,8 @@ import { GET_ORDERS, UPDATE_ORDER_STATUS, UPDATE_ORDER_PAYMENT } from '@/service
 
 export const useUpdateOrderStatus = () => {
   const [updateOrderStatus, { loading, error }] = useMutation(UPDATE_ORDER_STATUS);
-  const [updateOrderPayment, { loading: paymentLoading, error: paymentError }] = useMutation(UPDATE_ORDER_PAYMENT);
+  const [updateOrderPayment, { loading: paymentLoading, error: paymentError }] =
+    useMutation(UPDATE_ORDER_PAYMENT);
   const { data: orders, loading: ordersLoading, error: ordersError } = useQuery(GET_ORDERS);
 
   const handleUpdateOrderStatus = async (id: number, status: string) => {

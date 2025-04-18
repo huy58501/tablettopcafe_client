@@ -71,7 +71,12 @@ const Tables: React.FC<TablesProps> = ({ onTableSelect }) => {
             : null,
       }));
       setTables(mappedTables);
-      setTotalBill(mappedTables.reduce((acc: number, table: TableWithOrders) => acc + (table.orders?.total || 0), 0));
+      setTotalBill(
+        mappedTables.reduce(
+          (acc: number, table: TableWithOrders) => acc + (table.orders?.total || 0),
+          0
+        )
+      );
 
       // Group tables by room and sort by ID
       const groupedTables: TablesByRoom = {};

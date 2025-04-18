@@ -354,38 +354,48 @@ const OrderModal: React.FC<OrderModalProps> = ({
           {/* Order Summary for Mobile */}
           {order.orderItems.length > 0 && (
             <div className="border-t border-gray-100 bg-white">
-              <div className="max-h-[40vh] overflow-y-auto p-4 space-y-2">
+              <div className="max-h-[40vh] overflow-y-auto p-4 space-y-3">
                 {order.orderItems.map(item => (
-                  <div key={item.id} className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3 flex-1">
-                      <div className="flex items-center space-x-2">
+                  <div key={item.id} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3 flex-1">
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+                            className="p-1 hover:bg-gray-100 rounded"
+                          >
+                            <FaMinus className="text-gray-400 text-xs" />
+                          </button>
+                          <span className="w-4 text-center text-sm">{item.quantity}</span>
+                          <button
+                            onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                            className="p-1 hover:bg-gray-100 rounded"
+                          >
+                            <FaPlus className="text-gray-400 text-xs" />
+                          </button>
+                        </div>
+                        <span className="font-medium text-gray-800">{item.dish.name}</span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <span className="text-gray-800">
+                          {formatCurrency(item.price * item.quantity)}
+                        </span>
                         <button
-                          onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
-                          className="p-1 hover:bg-gray-100 rounded"
+                          onClick={() => handleRemoveItem(item.id)}
+                          className="text-red-500 p-1 hover:bg-red-50 rounded"
                         >
-                          <FaMinus className="text-gray-400 text-xs" />
-                        </button>
-                        <span className="w-4 text-center text-sm">{item.quantity}</span>
-                        <button
-                          onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
-                          className="p-1 hover:bg-gray-100 rounded"
-                        >
-                          <FaPlus className="text-gray-400 text-xs" />
+                          <FaTrash className="text-xs" />
                         </button>
                       </div>
-                      <span className="font-medium text-gray-800">{item.dish.name}</span>
                     </div>
-                    <div className="flex items-center space-x-3">
-                      <span className="text-gray-800">
-                        {formatCurrency(item.price * item.quantity)}
-                      </span>
-                      <button
-                        onClick={() => handleRemoveItem(item.id)}
-                        className="text-red-500 p-1 hover:bg-red-50 rounded"
-                      >
-                        <FaTrash className="text-xs" />
-                      </button>
-                    </div>
+                    <input
+                      type="text"
+                      placeholder="Add notes for this item..."
+                      value={item.notes}
+                      onChange={e => handleUpdateNotes(item.id, e.target.value)}
+                      className="w-full p-2 text-sm bg-gray-50 border border-gray-200 
+                               rounded-lg focus:outline-none focus:border-blue-500"
+                    />
                   </div>
                 ))}
               </div>
