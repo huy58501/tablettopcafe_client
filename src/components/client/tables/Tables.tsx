@@ -12,13 +12,17 @@ import {
   FaArrowLeft,
   FaMoneyBill,
   FaDoorOpen,
+  FaHistory,
+  FaTable,
 } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
 import { useTables } from '@/hooks/useTable';
 import SpinningModal from '@/components/UI/SpinningModal';
+import { useUpdateOrderStatus } from '@/hooks/useOrder';
 
-interface TablesProps {
-  onTableSelect?: (table: TableWithOrders) => void;
+// Extended OrderItem interface
+interface ExtendedOrderItem extends OrderItem {
+  name: string;
 }
 
 // Extended Table type to include orders
@@ -29,7 +33,7 @@ interface TableWithOrders extends Table {
 
 // Extended Order type to include additional properties needed for the UI
 export interface ExtendedOrder extends Order {
-  orderItems: OrderItem[];
+  orderItems: ExtendedOrderItem[];
   customerName?: string;
   customerNote?: string;
 }
@@ -39,10 +43,36 @@ interface TablesByRoom {
   [room: string]: TableWithOrders[];
 }
 
-const Tables: React.FC<TablesProps> = ({ onTableSelect }) => {
+// Table history record
+interface TableHistoryRecord {
+  id: number;
+  tableId: number;
+  tableNumber: string;
+  room: string;
+  status: string;
+  capacity: number;
+  timestamp: string;
+  action: string;
+  total: string;
+  details: string;
+  orderDetails?: HistoryOrderDetails;
+}
+
+// Interface for order details modal in history
+interface HistoryOrderDetails {
+  id: number;
+  orderItems: ExtendedOrderItem[];
+  total: number;
+  status: string;
+  createdAt: string;
+}
+
+const Tables: React.FC = () => {
   const [tables, setTables] = useState<TableWithOrders[]>([]);
   const [tablesByRoom, setTablesByRoom] = useState<TablesByRoom>({});
   const [selectedTable, setSelectedTable] = useState<TableWithOrders | null>(null);
+  const [activeTab, setActiveTab] = useState<'current' | 'history'>('current');
+  const [tableHistory, setTableHistory] = useState<TableHistoryRecord[]>([]);
   // Modal states
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [isPeopleCountModalOpen, setIsPeopleCountModalOpen] = useState(false);
@@ -53,10 +83,22 @@ const Tables: React.FC<TablesProps> = ({ onTableSelect }) => {
   const [tempPeopleCount, setTempPeopleCount] = useState<string>('1');
   const [splitBillData, setSplitBillData] = useState<any>(null);
   const [totalBill, setTotalBill] = useState<number>(0);
-  const { data: tablesData, loading: tablesLoading } = useTables();
+  const { tablesData, tablesLoading, handleUpdateTableStatus } = useTables();
+  const { handleUpdateOrderStatus, handleUpdateOrderPayment } = useUpdateOrderStatus();
+  const [selectedHistoryOrder, setSelectedHistoryOrder] = useState<HistoryOrderDetails | null>(
+    null
+  );
+  const [isHistoryOrderDetailsOpen, setIsHistoryOrderDetailsOpen] = useState(false);
+
   // Format currency to VND with thousands separators
   const formatCurrency = (amount: number) => {
-    return `VND: ${amount.toLocaleString('vi-VN')}`;
+    return `${amount.toLocaleString('vi-VN')}`;
+  };
+
+  // Format date to readable format
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString();
   };
 
   useEffect(() => {
@@ -95,20 +137,79 @@ const Tables: React.FC<TablesProps> = ({ onTableSelect }) => {
 
       setTablesByRoom(groupedTables);
 
-      // Debug log
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Mapped Tables:', mappedTables);
-      }
+      // Generate table history data
+      generateTableHistory(mappedTables);
     }
   }, [tablesData]);
 
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('tablesData: ', tablesData);
-      console.warn('tables data:', tables);
-      console.warn('tables by room:', tablesByRoom);
+  // Generate table history from tables data
+  const generateTableHistory = (tablesData: TableWithOrders[]) => {
+    const history: TableHistoryRecord[] = [];
+
+    // Get today's date range (12am to 12pm)
+    const today = new Date();
+    const startOfDay = new Date(today);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(today);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // Process all orders from tablesData
+    if (tablesData && tablesData.length > 0) {
+      // Get all orders from all tables
+      const allOrders: any[] = [];
+      tablesData.forEach(table => {
+        if (table.bookings && table.bookings.length > 0) {
+          table.bookings.forEach(booking => {
+            if (booking.order && booking.order.status === 'paid') {
+              allOrders.push({
+                ...booking.order,
+                tableId: table.id,
+                tableNumber: table.number,
+                room: table.room || 'Main Area',
+                capacity: table.capacity,
+              });
+            }
+          });
+        }
+      });
+
+      // Filter orders created today
+      allOrders.forEach(order => {
+        // Convert timestamp to Date object
+        const orderDate = new Date(parseInt(order.createdAt));
+
+        // Check if the order was created today (between startOfDay and endOfDay)
+        if (orderDate >= startOfDay && orderDate <= endOfDay) {
+          // Add only the order record for paid orders
+          history.push({
+            id: history.length + 1,
+            tableId: order.tableId,
+            tableNumber: order.tableNumber,
+            room: order.room,
+            status: order.status,
+            capacity: order.capacity,
+            timestamp: order.createdAt,
+            action: 'Order Paid',
+            total: formatCurrency(order.total),
+            details: `Order #${order.id}`,
+            orderDetails: {
+              id: order.id,
+              orderItems: order.orderItems,
+              total: order.total,
+              status: order.status,
+              createdAt: order.createdAt,
+            },
+          });
+        }
+      });
     }
-  }, [tables, tablesByRoom]);
+
+    // Sort history by timestamp (newest first)
+    history.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    setTableHistory(history);
+  };
 
   const handleTableClick = (table: TableWithOrders) => {
     setSelectedTable(table);
@@ -163,6 +264,21 @@ const Tables: React.FC<TablesProps> = ({ onTableSelect }) => {
     const parsedValue = parseInt(newValue);
     if (!isNaN(parsedValue)) {
       setPeopleCount(parsedValue);
+    }
+  };
+
+  const handlePaymentConfirm = (paymentData: {
+    paymentMethod: string;
+    amount: number;
+    reference: string;
+  }) => {
+    // Update the order status to 'paid'
+    if (paymentData.amount === selectedTable?.orders?.total) {
+      handleUpdateOrderPayment(selectedTable?.orders?.id || 0, paymentData.paymentMethod);
+      handleUpdateOrderStatus(selectedTable?.orders?.id || 0, 'paid');
+      handleUpdateTableStatus(selectedTable?.id || 0, 'available');
+    } else {
+      console.log('Payment amount is incorrect');
     }
   };
 
@@ -241,11 +357,6 @@ const Tables: React.FC<TablesProps> = ({ onTableSelect }) => {
       return newTablesByRoom;
     });
 
-    // Debug log
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Updated order:', order);
-    }
-
     // Close the order modal
     setIsOrderModalOpen(false);
   }
@@ -277,12 +388,12 @@ const Tables: React.FC<TablesProps> = ({ onTableSelect }) => {
     splitBillData.forEach((item: any) => {
       splitTotal += item.total;
     });
-    if (splitTotal === totalBill) {
-      console.log('Split bill data is correct');
-    } else {
-      console.log('Split bill data is incorrect');
-    }
     // You can add your logic here to update the order or handle the payment
+  };
+
+  const handleHistoryOrderClick = (orderDetails: HistoryOrderDetails) => {
+    setSelectedHistoryOrder(orderDetails);
+    setIsHistoryOrderDetailsOpen(true);
   };
 
   return (
@@ -317,76 +428,181 @@ const Tables: React.FC<TablesProps> = ({ onTableSelect }) => {
           </div>
         </div>
 
-        {/* Display tables grouped by room */}
-        {Object.entries(tablesByRoom).map(([room, roomTables], roomIndex) => (
-          <div key={room} className="mb-8">
-            <div className="flex items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-800">Room: {room}</h2>
-            </div>
-
-            <motion.div
-              className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, delay: roomIndex * 0.1 }}
+        {/* Tab Navigation */}
+        <div className="mb-6 border-b border-gray-200">
+          <nav className="flex -mb-px">
+            <button
+              onClick={() => setActiveTab('current')}
+              className={`flex items-center py-4 px-4 border-b-2 font-medium text-sm ${
+                activeTab === 'current'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
             >
-              {roomTables.map((table, index) => {
-                const statusInfo = getTableStatusInfo(table.status);
-                return (
-                  <motion.div
-                    key={table.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: index * 0.05 }}
-                    onClick={() => handleTableClick(table)}
-                    className={`
-                      ${statusInfo.color} ${statusInfo.hoverColor} ${statusInfo.borderColor}
-                      p-4 md:p-5 rounded-xl border-2 cursor-pointer transform transition-all duration-200
-                      hover:scale-105 hover:shadow-lg active:scale-95
-                      flex flex-col justify-between min-h-[140px] md:min-h-[160px]
-                    `}
-                  >
-                    <div>
-                      <div className="flex justify-between items-start mb-3">
-                        <h3 className="text-lg md:text-xl font-bold text-gray-800">
-                          {table.number}
-                        </h3>
-                        <div className="text-xl md:text-2xl">{statusInfo.icon}</div>
-                      </div>
+              <FaTable className="mr-2" />
+              Current Tables
+            </button>
+            <button
+              onClick={() => setActiveTab('history')}
+              className={`flex items-center py-4 px-4 border-b-2 font-medium text-sm ${
+                activeTab === 'history'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <FaHistory className="mr-2" />
+              Table History
+            </button>
+          </nav>
+        </div>
 
-                      <div className="space-y-1 md:space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <FaUsers className="text-gray-500" />
-                          <span className="text-sm md:text-base text-gray-600">
-                            Capacity: {table.capacity}
-                          </span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <FaUtensils className="text-gray-500" />
-                          <span className="text-sm md:text-base text-gray-600">
-                            Orders: {table.orders?.orderItems?.length || 0}
-                          </span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <FaMoneyBill className="text-gray-500" />
-                          <span className="text-sm md:text-base text-gray-600">
-                            Total: {formatCurrency(table.orders?.total || 0)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+        {/* Tab Content */}
+        {activeTab === 'current' ? (
+          <>
+            {/* Display tables grouped by room */}
+            {Object.entries(tablesByRoom).map(([room, roomTables], roomIndex) => (
+              <div key={room} className="mb-8">
+                <div className="flex items-center mb-4">
+                  <h2 className="text-xl font-semibold text-gray-800">Room: {room}</h2>
+                </div>
 
-                    <div className="mt-3 pt-3 border-t border-gray-200">
-                      <span className={`text-sm font-medium ${statusInfo.textColor}`}>
-                        {table.status.charAt(0).toUpperCase() + table.status.slice(1)}
-                      </span>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </motion.div>
+                <motion.div
+                  className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.5, delay: roomIndex * 0.1 }}
+                >
+                  {roomTables.map((table, index) => {
+                    const statusInfo = getTableStatusInfo(table.status);
+                    return (
+                      <motion.div
+                        key={table.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, delay: index * 0.05 }}
+                        onClick={() => handleTableClick(table)}
+                        className={`
+                          ${statusInfo.color} ${statusInfo.hoverColor} ${statusInfo.borderColor}
+                          p-4 md:p-5 rounded-xl border-2 cursor-pointer transform transition-all duration-200
+                          hover:scale-105 hover:shadow-lg active:scale-95
+                          flex flex-col justify-between min-h-[140px] md:min-h-[160px]
+                        `}
+                      >
+                        <div>
+                          <div className="flex justify-between items-start mb-3">
+                            <h3 className="text-lg md:text-xl font-bold text-gray-800">
+                              {table.number}
+                            </h3>
+                            <div className="text-xl md:text-2xl">{statusInfo.icon}</div>
+                          </div>
+
+                          <div className="space-y-1 md:space-y-2">
+                            <div className="flex items-center space-x-2">
+                              <FaUsers className="text-gray-500" />
+                              <span className="text-sm md:text-base text-gray-600">
+                                Capacity: {table.capacity}
+                              </span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <FaUtensils className="text-gray-500" />
+                              <span className="text-sm md:text-base text-gray-600">
+                                Orders: {table.orders?.orderItems?.length || 0}
+                              </span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <FaMoneyBill className="text-gray-500" />
+                              <span className="text-sm md:text-base text-gray-600">
+                                Total: {formatCurrency(table.orders?.total || 0)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 pt-3 border-t border-gray-200">
+                          <span className={`text-sm font-medium ${statusInfo.textColor}`}>
+                            {table.status.charAt(0).toUpperCase() + table.status.slice(1)}
+                          </span>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </motion.div>
+              </div>
+            ))}
+          </>
+        ) : (
+          <div className="bg-white rounded-xl shadow-md overflow-hidden">
+            <div className="p-4 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-800">Paid Orders History for Today</h2>
+              <p className="text-gray-600">
+                {new Date().toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Table
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Room
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Order
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Total
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {tableHistory.length > 0 ? (
+                    tableHistory.map(record => (
+                      <tr
+                        key={record.id}
+                        className="hover:bg-gray-50 cursor-pointer"
+                        onClick={() =>
+                          record.orderDetails && handleHistoryOrderClick(record.orderDetails)
+                        }
+                      >
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {record.tableNumber}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                          {record.room}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                          <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                            {record.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-500">{record.details}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {record.total}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-6 text-center text-gray-500">
+                        No paid orders for today
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-        ))}
+        )}
 
         {/* People Count Modal */}
         {isPeopleCountModalOpen && selectedTable && (
@@ -535,6 +751,7 @@ const Tables: React.FC<TablesProps> = ({ onTableSelect }) => {
                 setIsOrderDetailsOpen(false);
                 setIsSplitBillOpen(true);
               }}
+              onConfirm={handlePaymentConfirm}
             />
           </div>
         )}
@@ -547,6 +764,70 @@ const Tables: React.FC<TablesProps> = ({ onTableSelect }) => {
             order={selectedTable.orders}
             onConfirm={handleSplitBill}
           />
+        )}
+
+        {/* History Order Details Modal */}
+        {isHistoryOrderDetailsOpen && selectedHistoryOrder && (
+          <div
+            className="fixed inset-0 bg-gray-800/80 flex items-center justify-center z-50 p-4"
+            onClick={() => setIsHistoryOrderDetailsOpen(false)}
+          >
+            <div
+              className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xl font-semibold text-gray-800">
+                    Order Details #{selectedHistoryOrder.id}
+                  </h2>
+                  <button
+                    onClick={() => setIsHistoryOrderDetailsOpen(false)}
+                    className="text-gray-400 hover:text-gray-500"
+                  >
+                    <span className="sr-only">Close</span>
+                    <FaArrowLeft className="h-6 w-6" />
+                  </button>
+                </div>
+              </div>
+              <div className="p-6">
+                <div className="space-y-4">
+                  <div className="flex justify-between text-sm text-gray-500">
+                    <span>Status</span>
+                    <span className="font-medium text-green-600">
+                      {selectedHistoryOrder.status}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm text-gray-500">
+                    <span>Date</span>
+                    <span>{formatDate(selectedHistoryOrder.createdAt)}</span>
+                  </div>
+                  <div className="border-t border-gray-200 pt-4">
+                    <h3 className="font-medium text-gray-900 mb-4">Order Items</h3>
+                    <div className="space-y-3">
+                      {selectedHistoryOrder.orderItems.map((item, index) => (
+                        <div key={index} className="flex justify-between items-center">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{item.name}</p>
+                            <p className="text-sm text-gray-500">Quantity: {item.quantity}</p>
+                          </div>
+                          <p className="text-sm font-medium text-gray-900">
+                            {formatCurrency(item.price * item.quantity)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="border-t border-gray-200 pt-4">
+                    <div className="flex justify-between items-center text-lg font-medium text-gray-900">
+                      <span>Total</span>
+                      <span>{formatCurrency(selectedHistoryOrder.total)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

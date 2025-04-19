@@ -9,13 +9,15 @@ import {
   FaCheckCircle,
   FaSpinner,
   FaTimes,
+  FaShoppingCart,
+  FaChevronUp,
 } from 'react-icons/fa';
 import { gql, useMutation, useQuery } from '@apollo/client';
 import { CREATE_ORDER } from '@/services/orderServices';
 import { CREATE_BOOKING } from '@/services/bookingServices';
 import { GET_ALL_SLOTS } from '@/hooks/useAvailableSlots';
-import { useUpdateTableStatus } from '@/hooks/useTable';
 import { ALL_DISHES } from '@/services/dishServices';
+import { useTables } from '@/hooks/useTable';
 import SpinningModal from '@/components/UI/SpinningModal';
 
 interface OrderModalProps {
@@ -36,9 +38,10 @@ const OrderModal: React.FC<OrderModalProps> = ({
   peopleCount,
 }) => {
   const [createOrder, { loading: isSubmitting }] = useMutation(CREATE_ORDER);
-  const [createBooking, { loading: isBookingSubmitting }] = useMutation(CREATE_BOOKING);
+  const [createBooking] = useMutation(CREATE_BOOKING);
   const { data: slotData } = useQuery(GET_ALL_SLOTS);
-  const [updateTableStatus] = useUpdateTableStatus();
+  const { handleUpdateTableStatus } = useTables();
+  const [showMobileCart, setShowMobileCart] = useState(false);
 
   const [order, setOrder] = useState<Order>({
     id: existingOrder?.id || 0,
@@ -50,8 +53,6 @@ const OrderModal: React.FC<OrderModalProps> = ({
     tableId: existingOrder?.tableId || 0,
   });
 
-  const [selectedMenuItem, setSelectedMenuItem] = useState<string>('');
-  const [showQuantityPanel, setShowQuantityPanel] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { data: dishesData, loading: dishesLoading } = useQuery(ALL_DISHES);
@@ -163,7 +164,6 @@ const OrderModal: React.FC<OrderModalProps> = ({
   const getNextSlotId = () => {
     const now = new Date();
     const nowMinutes = now.getHours() * 60 + now.getMinutes();
-    console.log('slotData', slotData);
     // Default to a fallback slot ID if no slot data is available
     if (!slotData?.allTimeSlots || slotData.allTimeSlots.length === 0) {
       return 20; // Default fallback slot ID
@@ -191,6 +191,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
       }));
 
       const now = new Date();
+
       const createBookingRes = await createBooking({
         variables: {
           customerName: 'Guest',
@@ -210,6 +211,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
       }
 
       const bookingId = createBookingRes.data.createBooking.id;
+
       // Call the createOrder mutation
       const { data } = await createOrder({
         variables: {
@@ -218,33 +220,31 @@ const OrderModal: React.FC<OrderModalProps> = ({
         },
       });
 
-      // Update table status to occupied
-      await updateTableStatus({
-        variables: {
-          tableId: tableId,
-          status: 'occupied',
-        },
-      });
+      await handleUpdateTableStatus(tableId, 'occupied');
 
       // Call the onSave callback with the created order
       if (data?.createOrder) {
         setIsLoading(false);
         // Show success modal
         setShowSuccessModal(true);
-
-        // Wait for 2 seconds before closing the modal
         setTimeout(() => {
           setShowSuccessModal(false);
           onSave(data.createOrder);
           onClose();
-        }, 2000);
+        }, 500);
       } else {
         throw new Error('Failed to create order');
       }
     } catch (error) {
-      console.error('Error creating order:', error);
+      console.error('Error in handleSaveOrder:', {
+        error,
+        tableId,
+        orderDetails: {
+          items: order.orderItems.length,
+          total: order.total,
+        },
+      });
       setIsLoading(false);
-      // You might want to show an error message to the user here
     }
   };
 
@@ -314,7 +314,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
         {/* Mobile Layout */}
         <div className="flex flex-col md:hidden h-[calc(100vh-64px)] overflow-hidden">
           {/* Menu Categories */}
-          <div className="flex-1 overflow-y-auto px-4 py-3">
+          <div className="flex-1 overflow-y-auto px-4 py-3 pb-20">
             {dishesLoading ? (
               <SpinningModal
                 isOpen={true}
@@ -351,97 +351,140 @@ const OrderModal: React.FC<OrderModalProps> = ({
             )}
           </div>
 
-          {/* Order Summary for Mobile */}
-          {order.orderItems.length > 0 && (
-            <div className="border-t border-gray-100 bg-white">
-              <div className="max-h-[40vh] overflow-y-auto p-4 space-y-3">
-                {order.orderItems.map(item => (
-                  <div key={item.id} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3 flex-1">
-                        <div className="flex items-center space-x-2">
+          {/* Fixed Bottom Bar */}
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100">
+            <div className="p-4">
+              <button
+                onClick={() => setShowMobileCart(!showMobileCart)}
+                className="w-full py-3 px-4 bg-blue-600 text-white rounded-xl 
+                         hover:bg-blue-700 transition-colors flex items-center justify-between"
+              >
+                <div className="flex items-center gap-2">
+                  <FaShoppingCart className="text-lg" />
+                  <span className="font-medium">
+                    {order.orderItems.length} {order.orderItems.length === 1 ? 'item' : 'items'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">{formatCurrency(order.total)}</span>
+                  <FaChevronUp
+                    className={`transform transition-transform ${showMobileCart ? 'rotate-180' : ''}`}
+                  />
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Mobile Cart Slide-up Panel */}
+          <AnimatePresence>
+            {showMobileCart && (
+              <motion.div
+                initial={{ y: '100%' }}
+                animate={{ y: 0 }}
+                exit={{ y: '100%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 rounded-t-2xl shadow-lg z-50"
+                style={{ maxHeight: '80vh' }}
+              >
+                <div className="p-4 border-b border-gray-100">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-lg font-medium text-gray-800">Order Summary</h3>
+                    <button
+                      onClick={() => setShowMobileCart(false)}
+                      className="p-2 hover:bg-gray-100 rounded-full"
+                    >
+                      <FaTimes className="text-gray-500" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="overflow-y-auto" style={{ maxHeight: 'calc(80vh - 180px)' }}>
+                  <div className="p-4 space-y-4">
+                    {order.orderItems.map(item => (
+                      <div key={item.id} className="bg-gray-50 rounded-xl p-3 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-gray-800">{item.dish.name}</span>
+                          <span className="text-gray-800">
+                            {formatCurrency(item.price * item.quantity)}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center bg-white rounded-lg border border-gray-200">
+                              <button
+                                onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+                                className="p-1.5 hover:bg-gray-50 rounded-l-lg"
+                              >
+                                <FaMinus className="text-gray-500 text-xs" />
+                              </button>
+                              <span className="w-8 text-center text-sm font-medium">
+                                {item.quantity}
+                              </span>
+                              <button
+                                onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                                className="p-1.5 hover:bg-gray-50 rounded-r-lg"
+                              >
+                                <FaPlus className="text-gray-500 text-xs" />
+                              </button>
+                            </div>
+                          </div>
                           <button
-                            onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
-                            className="p-1 hover:bg-gray-100 rounded"
+                            onClick={() => handleRemoveItem(item.id)}
+                            className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"
                           >
-                            <FaMinus className="text-gray-400 text-xs" />
-                          </button>
-                          <span className="w-4 text-center text-sm">{item.quantity}</span>
-                          <button
-                            onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
-                            className="p-1 hover:bg-gray-100 rounded"
-                          >
-                            <FaPlus className="text-gray-400 text-xs" />
+                            <FaTrash className="text-sm" />
                           </button>
                         </div>
-                        <span className="font-medium text-gray-800">{item.dish.name}</span>
+
+                        <input
+                          type="text"
+                          placeholder="Add notes for this item..."
+                          value={item.notes}
+                          onChange={e => handleUpdateNotes(item.id, e.target.value)}
+                          className="w-full p-2 text-sm bg-white border border-gray-200 
+                                   rounded-lg focus:outline-none focus:border-blue-500"
+                        />
                       </div>
-                      <div className="flex items-center space-x-3">
-                        <span className="text-gray-800">
-                          {formatCurrency(item.price * item.quantity)}
-                        </span>
-                        <button
-                          onClick={() => handleRemoveItem(item.id)}
-                          className="text-red-500 p-1 hover:bg-red-50 rounded"
-                        >
-                          <FaTrash className="text-xs" />
-                        </button>
-                      </div>
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="Add notes for this item..."
-                      value={item.notes}
-                      onChange={e => handleUpdateNotes(item.id, e.target.value)}
-                      className="w-full p-2 text-sm bg-gray-50 border border-gray-200 
-                               rounded-lg focus:outline-none focus:border-blue-500"
-                    />
+                    ))}
                   </div>
-                ))}
-              </div>
-
-              <div className="p-4 border-t border-gray-100">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-lg font-medium">Total</span>
-                  <span className="text-xl font-bold">{formatCurrency(order.total)}</span>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={e => {
-                      e.stopPropagation();
-                      onClose();
-                    }}
-                    className="flex-1 py-2.5 px-4 border border-gray-200 text-gray-700 
-                             rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={e => {
-                      e.stopPropagation();
-                      handleSaveOrder();
-                    }}
-                    disabled={order.orderItems.length === 0 || isSubmitting}
-                    className="flex-1 py-2.5 px-4 bg-blue-600 text-white rounded-lg 
-                             hover:bg-blue-700 transition-colors text-sm font-medium
-                             disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isSubmitting ? 'Saving...' : 'Save Order'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
 
-          {/* Note Field for Mobile - Always visible */}
-          <div className="border-t border-gray-100 bg-white p-4">
-            <div className="flex items-center mb-2">
-              <span className="text-sm font-medium text-gray-700">Item Notes</span>
-            </div>
-            <p className="text-sm text-gray-500 mb-2">
-              Add notes to individual items in your order above.
-            </p>
-          </div>
+                <div className="p-4 border-t border-gray-100">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-lg font-medium text-gray-800">Total</span>
+                    <span className="text-xl font-bold text-gray-900">
+                      {formatCurrency(order.total)}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        onClose();
+                      }}
+                      className="flex-1 py-3 border border-gray-200 text-gray-700 
+                               rounded-xl hover:bg-gray-50 transition-colors text-sm font-medium"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        handleSaveOrder();
+                      }}
+                      disabled={order.orderItems.length === 0 || isSubmitting}
+                      className="flex-1 py-3 bg-blue-600 text-white rounded-xl 
+                               hover:bg-blue-700 transition-colors text-sm font-medium
+                               disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isSubmitting ? 'Saving...' : 'Save Order'}
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Desktop Layout */}

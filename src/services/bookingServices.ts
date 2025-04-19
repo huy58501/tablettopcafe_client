@@ -31,6 +31,7 @@ export const CREATE_BOOKING = gql`
     $customerEmail: String
     $customerNote: String
     $bookingType: String!
+    $tableId: Int
   ) {
     createBooking(
       customerName: $customerName
@@ -42,6 +43,7 @@ export const CREATE_BOOKING = gql`
       customerEmail: $customerEmail
       customerNote: $customerNote
       bookingType: $bookingType
+      tableId: $tableId
     ) {
       id
       table {

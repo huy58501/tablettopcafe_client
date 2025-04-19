@@ -45,6 +45,9 @@ interface SplitBillState {
 
 interface FinalSplitData {
   splits: SplitBillState[];
+  paymentMethod: string;
+  amount: number;
+  reference: string;
 }
 
 const SplitBill: React.FC<SplitBillProps> = ({ isOpen, onClose, order, onConfirm }) => {
@@ -160,10 +163,18 @@ const SplitBill: React.FC<SplitBillProps> = ({ isOpen, onClose, order, onConfirm
     }
   };
 
-  const handleFinalConfirm = (splits: SplitBillState[]) => {
+  const handleFinalConfirm = (splitsBill: SplitBillState[]) => {
     onConfirm({
-      splits: splits,
+      splits: splitsBill,
+      paymentMethod: 'Tiền Mặt',
+      amount: paymentAmount,
+      reference: paymentReference,
     });
+    console.log('Split Bill');
+    console.log('splitsBill', splitsBill);
+    console.log('paymentAmount', paymentAmount);
+    console.log('paymentReference', paymentReference);
+    console.log('paymentMethod', 'Tiền Mặt');
   };
 
   const handleCancel = () => {
@@ -185,27 +196,38 @@ const SplitBill: React.FC<SplitBillProps> = ({ isOpen, onClose, order, onConfirm
 
   const handlePaymentComplete = () => {
     setShowQRPayment(false);
-    setPaymentCompleted(true);
-    if (bill2Items.length > 0) {
-      // Store current split
-      const newSplit: SplitBillState = {
-        items: bill2Items,
-        total: bill2Total,
-      };
-      setCompletedSplits([...completedSplits, newSplit]);
+    setPaymentCompleted(false);
+  };
 
-      // Continue with remaining items in Bill 1
-      if (bill1Items.length > 0) {
-        setBill2Items([]);
-        setSplitStep(splitStep + 1);
-      } else {
-        // No more items to split, send final data
-        handleFinalConfirm([...completedSplits, newSplit]);
-      }
-      setPaymentCompleted(false);
+  const handlePaymentConfirm = (paymentData: {
+    paymentMethod: string;
+    amount: number;
+    reference: string;
+  }) => {
+    // Handle the payment confirmation with reference
+    console.log(
+      `Payment confirmed - Method: ${paymentData.paymentMethod}, Reference: ${paymentData.reference}, Amount: ${paymentData.amount}`
+    );
+
+    // Store the payment data for this split
+    const newSplit: SplitBillState = {
+      items: bill2Items,
+      total: paymentData.amount,
+    };
+
+    setCompletedSplits([...completedSplits, newSplit]);
+
+    // If there are remaining items, prepare for next split
+    if (bill1Items.length > 0) {
+      setBill2Items([]);
+      setSplitStep(splitStep + 1);
+    } else {
+      // No more items to split, send final data
+      handleFinalConfirm([...completedSplits, newSplit]);
     }
-    // Here you would typically update the order status or handle the payment completion
-    // For example, you might want to close the split bill modal or update the order status
+
+    setPaymentCompleted(true);
+    handlePaymentComplete();
   };
 
   if (!isOpen) return null;
@@ -222,27 +244,25 @@ const SplitBill: React.FC<SplitBillProps> = ({ isOpen, onClose, order, onConfirm
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`bg-white rounded-lg p-4 shadow-sm border border-gray-200 hover:border-blue-300 transition-colors cursor-pointer ${
-        direction === 'right' ? 'hover:bg-blue-50' : 'hover:bg-gray-50'
-      }`}
+      className={`bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 transition-colors 
+                ${direction === 'right' ? 'hover:bg-blue-50' : 'hover:bg-gray-50'}`}
       onClick={onMove}
     >
-      <div className="flex justify-between items-center">
-        <div className="flex-1">
-          <h4 className="font-medium text-gray-800">{item.name}</h4>
-          <p className="text-sm text-gray-600">{item.notes}</p>
-          <div className="flex items-center mt-1">
-            <span className="text-sm font-medium text-gray-700">
-              Quantity: {item.splitQuantity}/{item.quantity}
+      <div className="flex items-center justify-between">
+        <div className="flex-1 min-w-0">
+          <h4 className="font-medium text-gray-800 truncate">{item.name}</h4>
+          <div className="flex items-center mt-1 text-sm">
+            <span className="font-medium text-gray-600">
+              {item.splitQuantity}/{item.quantity}
             </span>
             <span className="mx-2 text-gray-400">•</span>
-            <span className="text-sm font-medium text-gray-700">
+            <span className="font-medium text-gray-600">
               {formatCurrency(item.price * item.splitQuantity)}
             </span>
           </div>
         </div>
         <div
-          className={`ml-4 p-2 rounded-full ${
+          className={`ml-3 p-2 rounded-full ${
             direction === 'right' ? 'bg-blue-50 text-blue-600' : 'bg-gray-50 text-gray-600'
           }`}
         >
@@ -253,144 +273,124 @@ const SplitBill: React.FC<SplitBillProps> = ({ isOpen, onClose, order, onConfirm
   );
 
   return (
-    <>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-white md:bg-gray-800/80 flex items-start md:items-center justify-center z-50"
+      onClick={e => e.target === e.currentTarget && handleCancel()}
+    >
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-gray-800/80 flex items-center justify-center z-50 p-4"
-        onClick={e => e.target === e.currentTarget && handleCancel()}
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        className="bg-white w-full h-full md:h-auto md:rounded-2xl md:w-full md:max-w-[1000px] md:max-h-[90vh] overflow-hidden shadow-2xl"
       >
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.9, opacity: 0 }}
-          className="bg-white rounded-2xl w-full max-w-[1000px] shadow-2xl overflow-hidden"
-        >
-          {/* Header */}
-          <div className="bg-gray-50 px-4 md:px-6 py-4 border-b border-gray-200">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-lg md:text-xl font-semibold text-gray-800">Split Bill</h2>
-                <p className="text-sm text-gray-600 mt-1">
-                  Step {splitStep}{' '}
-                  {completedSplits.length > 0 && `• ${completedSplits.length} split(s) completed`}
-                </p>
-              </div>
-              <button
-                onClick={handleCancel}
-                className="p-2 rounded-full hover:bg-gray-200 transition-colors"
-              >
-                <FaTimes className="text-gray-600" />
-              </button>
-            </div>
-          </div>
-
-          {/* Content */}
-          <div className="p-4 md:p-6">
-            <div className="flex flex-col md:flex-row gap-4 md:gap-6">
-              {/* Bill 1 */}
-              <div className="flex-1">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-base md:text-lg font-medium text-gray-700">
-                    Remaining Items
-                  </h3>
-                  <span className="text-base md:text-lg font-semibold text-blue-600">
-                    {formatCurrency(bill1Total)}
-                  </span>
-                </div>
-                <p className="text-xs md:text-sm text-gray-500 mb-3">
-                  Click on any item to move it to Split {splitStep}
-                </p>
-                <div className="space-y-2 md:space-y-3 max-h-[300px] md:max-h-[500px] overflow-y-auto">
-                  {bill1Items.map(item => (
-                    <BillItem
-                      key={item.id}
-                      item={item}
-                      onMove={() => moveItemToBill2(item)}
-                      direction="right"
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Bill 2 */}
-              <div className="flex-1">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-base md:text-lg font-medium text-gray-700">
-                    Split {splitStep}
-                  </h3>
-                  <span className="text-base md:text-lg font-semibold text-blue-600">
-                    {formatCurrency(bill2Total)}
-                  </span>
-                </div>
-                <p className="text-xs md:text-sm text-gray-500 mb-3">
-                  Click on any item to move it back to Remaining Items
-                </p>
-                <div className="space-y-2 md:space-y-3 max-h-[300px] md:max-h-[500px] overflow-y-auto">
-                  {bill2Items.map(item => (
-                    <BillItem
-                      key={item.id}
-                      item={item}
-                      onMove={() => moveItemToBill1(item)}
-                      direction="left"
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Completed Splits Summary */}
-            {completedSplits.length > 0 && (
-              <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-gray-200">
-                <h3 className="text-base md:text-lg font-medium text-gray-700 mb-3">
-                  Completed Splits
-                </h3>
-                <div className="flex flex-wrap gap-2 md:gap-3">
-                  {completedSplits.map((split, index) => (
-                    <div key={index} className="bg-gray-50 rounded-lg p-2 md:p-3">
-                      <div className="font-medium text-gray-700">Split {index + 1}</div>
-                      <div className="text-xs md:text-sm text-gray-600">
-                        {formatCurrency(split.total)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="flex gap-2 md:gap-3 mt-4 md:mt-6 pt-4 md:pt-6 border-t border-gray-200">
-              <button
-                onClick={handleCancel}
-                className="flex-1 py-2.5 md:py-3.5 px-3 md:px-4 border-2 border-gray-200 text-gray-700 font-medium 
-                         rounded-xl hover:bg-gray-50 transition-colors text-sm md:text-base"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSplitConfirm}
-                disabled={bill2Items.length === 0}
-                className="flex-1 py-2.5 md:py-3.5 px-3 md:px-4 bg-blue-600 text-white font-medium 
-                         rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 
-                         disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm md:text-base"
-              >
-                <FaCheck className="text-sm" />
-                <span>
-                  {bill1Items.length === 0 ? 'Complete All Splits' : 'Continue to Next Split'}
-                </span>
-              </button>
-            </div>
-
-            {/* Instructions */}
-            <div className="mt-3 md:mt-4 text-center text-xs md:text-sm text-gray-500">
-              <p>
-                💡 <span className="font-medium">Tip:</span> Click on any item to move it between
-                bills
+        {/* Header */}
+        <div className="bg-gray-50 px-4 md:px-6 py-3 md:py-4 border-b border-gray-200 sticky top-0 z-10">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-lg md:text-xl font-semibold text-gray-800">Split Bill</h2>
+              <p className="text-sm text-gray-600 mt-1">
+                Step {splitStep}{' '}
+                {completedSplits.length > 0 && `• ${completedSplits.length} split(s) completed`}
               </p>
             </div>
+            <button
+              onClick={handleCancel}
+              className="p-2 rounded-full hover:bg-gray-200 transition-colors"
+            >
+              <FaTimes className="text-gray-600" />
+            </button>
           </div>
-        </motion.div>
+        </div>
+
+        {/* Content */}
+        <div className="flex flex-col md:flex-row h-[calc(100vh-60px)] md:h-auto">
+          {/* Bill 1 */}
+          <div className="flex-1 p-4 md:p-6 overflow-y-auto border-b md:border-b-0 md:border-r border-gray-100">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-base md:text-lg font-medium text-gray-700">Remaining Items</h3>
+              <span className="text-base md:text-lg font-semibold text-blue-600">
+                {formatCurrency(bill1Total)}
+              </span>
+            </div>
+            <p className="text-xs md:text-sm text-gray-500 mb-3">
+              Tap any item to move it to Split {splitStep}
+            </p>
+            <div className="space-y-2">
+              {bill1Items.map(item => (
+                <BillItem
+                  key={item.id}
+                  item={item}
+                  onMove={() => moveItemToBill2(item)}
+                  direction="right"
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Bill 2 */}
+          <div className="flex-1 p-4 md:p-6 overflow-y-auto">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-base md:text-lg font-medium text-gray-700">Split {splitStep}</h3>
+              <span className="text-base md:text-lg font-semibold text-blue-600">
+                {formatCurrency(bill2Total)}
+              </span>
+            </div>
+            <p className="text-xs md:text-sm text-gray-500 mb-3">
+              Tap any item to move it back to Remaining Items
+            </p>
+            <div className="space-y-2">
+              {bill2Items.map(item => (
+                <BillItem
+                  key={item.id}
+                  item={item}
+                  onMove={() => moveItemToBill1(item)}
+                  direction="left"
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Actions Bar - Fixed on Mobile */}
+        <div className="fixed bottom-0 left-0 right-0 md:static bg-white border-t border-gray-200 p-4 md:p-6">
+          {completedSplits.length > 0 && (
+            <div className="mb-4 overflow-x-auto">
+              <div className="flex gap-2">
+                {completedSplits.map((split, index) => (
+                  <div key={index} className="flex-shrink-0 bg-gray-50 rounded-lg p-2">
+                    <div className="font-medium text-gray-700">Split {index + 1}</div>
+                    <div className="text-sm text-gray-600">{formatCurrency(split.total)}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <button
+              onClick={handleCancel}
+              className="flex-1 py-3 px-4 border border-gray-200 text-gray-700 font-medium 
+                       rounded-xl hover:bg-gray-50 transition-colors text-sm"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSplitConfirm}
+              disabled={bill2Items.length === 0}
+              className="flex-1 py-3 px-4 bg-blue-600 text-white font-medium rounded-xl 
+                       hover:bg-blue-700 transition-colors text-sm flex items-center justify-center gap-2
+                       disabled:bg-gray-300 disabled:cursor-not-allowed"
+            >
+              <FaCheck className="text-sm" />
+              <span>
+                {bill1Items.length === 0 ? 'Complete All Splits' : 'Continue to Next Split'}
+              </span>
+            </button>
+          </div>
+        </div>
       </motion.div>
 
       {/* QR Payment Modal */}
@@ -401,8 +401,9 @@ const SplitBill: React.FC<SplitBillProps> = ({ isOpen, onClose, order, onConfirm
         amount={paymentAmount}
         tableId={order.tableId}
         reference={paymentReference}
+        onConfirm={handlePaymentConfirm}
       />
-    </>
+    </motion.div>
   );
 };
 

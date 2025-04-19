@@ -15,6 +15,14 @@ export const menuItemsAdmin = (username: string) => [
     label: 'Quản Lý Bếp',
     href: `/${username}/kitchen`,
   },
+  {
+    label: 'Quản Lý Shifts',
+    href: `/${username}/shifts`,
+  },
+  {
+    label: 'Báo Cáo',
+    href: `/${username}/reports`,
+  },
 ];
 
 export const menuItemsClient = (username: string) => [
@@ -30,6 +38,14 @@ export const menuItemsClient = (username: string) => [
     label: 'Quản Lý Bếp',
     href: `/${username}/kitchen`,
   },
+  {
+    label: 'Quản Lý Shifts',
+    href: `/${username}/shifts`,
+  },
+  {
+    label: 'Báo Cáo',
+    href: `/${username}/reports`,
+  },
 ];
 
 export const menuItemsAdminClientView = (username: string) => [
@@ -44,5 +60,13 @@ export const menuItemsAdminClientView = (username: string) => [
   {
     label: 'Quản Lý Bếp',
     href: `/${username}/kitchen`,
+  },
+  {
+    label: 'Quản Lý Shifts',
+    href: `/${username}/shifts`,
+  },
+  {
+    label: 'Báo Cáo',
+    href: `/${username}/reports`,
   },
 ];

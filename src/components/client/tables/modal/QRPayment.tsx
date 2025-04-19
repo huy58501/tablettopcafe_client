@@ -1,80 +1,58 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
-import { FaCheck, FaTimes, FaMoneyBill, FaQrcode, FaArrowLeft } from 'react-icons/fa';
+import { FaTimes, FaArrowLeft, FaCheck, FaQrcode, FaMoneyBill } from 'react-icons/fa';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface QRPaymentProps {
   isOpen: boolean;
   onClose: () => void;
   onComplete: () => void;
   amount: number;
-  tableId: number;
+  tableId?: number;
   reference?: string;
+  onConfirm: (paymentData: { paymentMethod: string; amount: number; reference: string }) => void;
 }
 
 const QRPayment: React.FC<QRPaymentProps> = ({
   isOpen,
   onClose,
   onComplete,
+  onConfirm,
   amount,
   tableId,
   reference,
 }) => {
-  const [paymentMethod, setPaymentMethod] = useState<'qr' | 'cash' | null>(null);
-  const [cashAmount, setCashAmount] = useState<string>('');
-  const [tempCashAmount, setTempCashAmount] = useState<string>('');
+  const [showQR, setShowQR] = React.useState(false);
+  const [paymentMethod, setPaymentMethod] = React.useState<string>('Tiền Mặt');
 
-  // Reset payment method when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      setPaymentMethod(null);
-      setCashAmount('');
-      setTempCashAmount('');
-    }
-  }, [isOpen]);
-
-  // Format currency to VND with thousands separators
   const formatCurrency = (amount: number) => {
     return `VND: ${amount.toLocaleString('vi-VN')}`;
   };
 
-  const handleNumberClick = (num: number) => {
-    // Convert the clicked number to string
-    const newValue = tempCashAmount + num.toString();
-    setTempCashAmount(newValue);
-
-    // Update cashAmount if it's a valid number
-    const parsedValue = parseInt(newValue);
-    if (!isNaN(parsedValue)) {
-      setCashAmount(newValue);
-    }
+  const handlePayWithQR = () => {
+    setShowQR(true);
+    setPaymentMethod('Chuyển Khoản');
   };
 
-  const handleClearNumber = () => {
-    setTempCashAmount('');
-    setCashAmount('');
+  const handleBack = () => {
+    setShowQR(false);
+    setPaymentMethod('Tiền Mặt');
   };
 
-  const handleBackspace = () => {
-    // Remove the last digit
-    const newValue = tempCashAmount.slice(0, -1);
-    setTempCashAmount(newValue);
-
-    // Update cashAmount
-    const parsedValue = parseInt(newValue);
-    if (!isNaN(parsedValue)) {
-      setCashAmount(newValue);
-    } else {
-      setCashAmount('');
-    }
+  const handleClose = () => {
+    setShowQR(false);
+    setPaymentMethod('Tiền Mặt');
+    onClose();
   };
 
-  const handlePaymentComplete = () => {
+  const handlePaymentConfirm = () => {
+    onConfirm({
+      paymentMethod: paymentMethod,
+      amount: amount,
+      reference: reference || '',
+    });
     onComplete();
-  };
-
-  const calculateChange = () => {
-    const paid = parseInt(cashAmount) || 0;
-    return paid - amount;
+    console.log('Payment Confirm from QR Payment', paymentMethod + ' ' + amount + ' ' + reference);
   };
 
   if (!isOpen) return null;
@@ -84,190 +62,137 @@ const QRPayment: React.FC<QRPaymentProps> = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-gray-800/80 flex items-center justify-center z-50 p-4"
-      onClick={e => e.target === e.currentTarget && onClose()}
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      onClick={e => e.target === e.currentTarget && handleClose()}
     >
       <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
+        initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden"
+        exit={{ scale: 0.95, opacity: 0 }}
+        className="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-xl"
       >
-        {/* Header */}
-        <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold text-gray-800">
-              {paymentMethod === 'qr'
-                ? 'QR Payment'
-                : paymentMethod === 'cash'
-                  ? 'Cash Payment'
-                  : 'Payment Options'}
-            </h2>
-            <button
-              onClick={onClose}
-              className="p-2 rounded-full hover:bg-gray-200 transition-colors"
-            >
-              <FaTimes className="text-gray-600" />
-            </button>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h4 className="text-lg font-medium text-gray-700">Total Amount</h4>
-            <span className="text-xl font-bold text-blue-600">{formatCurrency(amount)}</span>
-          </div>
-
-          {!paymentMethod ? (
-            // Payment Method Selection
-            <div className="space-y-4 my-6">
+        {!showQR ? (
+          <>
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-base font-semibold text-gray-800">Payment Options</h2>
               <button
-                onClick={() => setPaymentMethod('qr')}
-                className="w-full py-4 px-6 bg-blue-600 text-white font-medium 
-                         rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center gap-3"
+                onClick={handleClose}
+                className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
               >
-                <FaQrcode className="text-xl" />
-                <span>Pay with QR Code</span>
-              </button>
-              <button
-                onClick={() => setPaymentMethod('cash')}
-                className="w-full py-4 px-6 bg-green-600 text-white font-medium 
-                         rounded-xl hover:bg-green-700 transition-colors flex items-center justify-center gap-3"
-              >
-                <FaMoneyBill className="text-xl" />
-                <span>Pay with Cash</span>
+                <FaTimes className="text-gray-500 w-4 h-4" />
               </button>
             </div>
-          ) : paymentMethod === 'qr' ? (
-            // QR Payment Content
-            <>
-              <div className="flex justify-center my-6">
-                <div className="bg-gray-100 p-4 rounded-lg">
-                  <img src="/images/qr-code.png" alt="QR Payment Code" className="w-48 h-48" />
-                </div>
+
+            <div className="p-4">
+              <div className="flex justify-between items-center mb-5">
+                <span className="text-sm text-gray-600">Total Amount</span>
+                <span className="text-base font-semibold text-blue-600">
+                  {formatCurrency(amount)}
+                </span>
               </div>
 
-              <div className="space-y-2 mb-6">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Bank:</span>
-                  <span className="font-medium">Vietcombank</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Account:</span>
-                  <span className="font-medium">1234567890</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Beneficiary:</span>
-                  <span className="font-medium">TabletTop Cafe</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Reference:</span>
-                  <span className="font-medium">{reference || `Table ${tableId}`}</span>
-                </div>
-              </div>
-
-              <div className="text-sm text-gray-500 text-center mb-6">
-                Scan the QR code with your banking app to complete the payment
-              </div>
-            </>
-          ) : (
-            // Cash Payment Content
-            <>
-              <div className="mb-6">
-                <div className="bg-white border-2 border-blue-100 rounded-xl p-6 mb-4 text-center">
-                  <div className="text-5xl font-bold text-blue-600 mb-2">
-                    {cashAmount ? formatCurrency(parseInt(cashAmount)) : 'VND: 0'}
-                  </div>
-                  <div className="flex items-center justify-center gap-2 text-gray-500">
-                    <FaMoneyBill className="text-blue-400" />
-                    <p className="text-sm">Enter amount paid</p>
-                  </div>
-                </div>
-
-                {parseInt(cashAmount) > amount && (
-                  <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-green-700 font-medium">Change:</span>
-                      <span className="text-green-700 font-bold">
-                        {formatCurrency(calculateChange())}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Number Pad */}
-              <div className="grid grid-cols-3 gap-3 mb-6">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
-                  <button
-                    key={num}
-                    onClick={() => handleNumberClick(num)}
-                    className="aspect-square flex items-center justify-center bg-white border-2 border-gray-200 
-                             hover:border-blue-400 hover:bg-blue-50 text-2xl font-semibold text-gray-700 
-                             rounded-xl transition-all duration-200 active:scale-95"
-                  >
-                    {num}
-                  </button>
-                ))}
+              <div className="space-y-3">
                 <button
-                  onClick={handleClearNumber}
-                  className="aspect-square flex items-center justify-center bg-white border-2 border-red-200 
-                           hover:border-red-400 hover:bg-red-50 text-lg font-medium text-red-600 
-                           rounded-xl transition-all duration-200 active:scale-95"
+                  onClick={handlePayWithQR}
+                  className="w-full py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 
+                           transition-colors flex items-center justify-center gap-2 text-sm"
                 >
-                  Clear
+                  <FaQrcode className="w-4 h-4" />
+                  Pay with QR Code
                 </button>
+
                 <button
-                  onClick={() => handleNumberClick(0)}
-                  className="aspect-square flex items-center justify-center bg-white border-2 border-gray-200 
-                           hover:border-blue-400 hover:bg-blue-50 text-2xl font-semibold text-gray-700 
-                           rounded-xl transition-all duration-200 active:scale-95"
+                  onClick={handlePaymentConfirm}
+                  className="w-full py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 
+                           transition-colors flex items-center justify-center gap-2 text-sm"
                 >
-                  0
+                  <FaMoneyBill className="w-4 h-4" />
+                  Pay with Cash
                 </button>
+
                 <button
-                  onClick={handleBackspace}
-                  className="aspect-square flex items-center justify-center bg-white border-2 border-gray-200 
-                           hover:border-gray-400 hover:bg-gray-50 text-lg font-medium text-gray-600 
-                           rounded-xl transition-all duration-200 active:scale-95"
+                  onClick={handleClose}
+                  className="w-full py-2 border border-gray-200 text-gray-700 rounded-xl 
+                           hover:bg-gray-50 transition-colors text-sm"
                 >
-                  ←
+                  Cancel
                 </button>
               </div>
-            </>
-          )}
-
-          <div className="flex gap-3">
-            {paymentMethod && (
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleBack}
+                  className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <FaArrowLeft className="text-gray-500 w-4 h-4" />
+                </button>
+                <h2 className="text-base font-semibold text-gray-800">QR Payment</h2>
+              </div>
               <button
-                onClick={() => setPaymentMethod(null)}
-                className="py-3 px-4 border-2 border-gray-200 text-gray-700 font-medium 
-                         rounded-xl hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+                onClick={handleClose}
+                className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
               >
-                <FaArrowLeft className="text-sm" />
-                <span>Back</span>
+                <FaTimes className="text-gray-500 w-4 h-4" />
               </button>
-            )}
-            <button
-              onClick={onClose}
-              className="flex-1 py-3 px-4 border-2 border-gray-200 text-gray-700 font-medium 
-                       rounded-xl hover:bg-gray-50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handlePaymentComplete}
-              disabled={paymentMethod === 'cash' && (parseInt(cashAmount) || 0) < amount}
-              className="flex-1 py-3 px-4 bg-blue-600 text-white font-medium 
-                       rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center gap-2
-                       disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <FaCheck className="text-sm" />
-              <span>Payment Complete</span>
-            </button>
-          </div>
-        </div>
+            </div>
+
+            <div className="p-4">
+              <div className="flex justify-between items-center mb-4">
+                <span className="text-sm text-gray-600">Total Amount</span>
+                <span className="text-base font-semibold text-blue-600">
+                  {formatCurrency(amount)}
+                </span>
+              </div>
+
+              <div className="bg-gray-50 p-3 rounded-xl mb-4 flex justify-center">
+                <QRCodeSVG
+                  value={`https://example.com/pay?amount=${amount}&ref=${reference}`}
+                  size={180}
+                  level="H"
+                  className="w-auto h-auto"
+                  includeMargin={true}
+                />
+              </div>
+
+              <div className="space-y-2 text-sm mb-4">
+                <div className="flex justify-between py-2 border-b border-gray-100">
+                  <span className="text-gray-500">Bank</span>
+                  <span className="font-medium text-gray-700">Vietcombank</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-gray-100">
+                  <span className="text-gray-500">Account</span>
+                  <span className="font-medium text-gray-700">1234567890</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-gray-100">
+                  <span className="text-gray-500">Beneficiary</span>
+                  <span className="font-medium text-gray-700">TabletTop Cafe</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-gray-100">
+                  <span className="text-gray-500">Reference</span>
+                  <span className="font-medium text-gray-700">{reference}</span>
+                </div>
+              </div>
+
+              <p className="text-center text-xs text-gray-500 mb-4">
+                Scan the QR code with your banking app to complete the payment
+              </p>
+
+              <button
+                onClick={handlePaymentConfirm}
+                className="w-full py-2.5 bg-blue-600 text-white rounded-xl 
+                         hover:bg-blue-700 transition-colors text-sm font-medium
+                         flex items-center justify-center gap-2"
+              >
+                <FaCheck className="w-3.5 h-3.5" />
+                Payment Complete
+              </button>
+            </div>
+          </>
+        )}
       </motion.div>
     </motion.div>
   );

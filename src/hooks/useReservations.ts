@@ -49,6 +49,7 @@ export const useReservations = () => {
           bookingType: formData.bookingType || 'online',
           customerEmail: formData.customerEmail || '',
           customerNote: formData.customerNote || '',
+          tableId: formData.tableId || 0,
         },
       });
       console.log('Booking created:', result);
