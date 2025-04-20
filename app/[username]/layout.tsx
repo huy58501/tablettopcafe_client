@@ -1,9 +1,9 @@
 'use client';
 import { use } from 'react';
-import Sidebar from '@/components/UI/Sidebar';
+import Sidebar from '@/components/layout/Sidebar';
 import useAuth from '@/hooks/useAuth';
 import LoadingModal from '@/components/UI/LoadingModal';
-import NotFound from '@/components/UI/NotFound';
+import NotFound from '@/components/layout/NotFound';
 import { menuItemsClient, menuItemsAdmin } from '@/config/menuData';
 
 type LayoutParams = {

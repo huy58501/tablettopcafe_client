@@ -142,7 +142,7 @@ const ShiftChecklist: React.FC<ShiftChecklistProps> = ({ isOpen, onClose, onComp
             disabled={!isAllCompleted}
             className="w-full py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 
                      transition-colors flex items-center justify-center gap-2
-                     disabled:bg-gray-300 disabled:cursor-not-allowed"
+                     disabled:bg-gray-300 disabled:cursor-not-allowed cursor-pointer"
           >
             <FaCheck className="w-4 h-4" />
             Complete Shift

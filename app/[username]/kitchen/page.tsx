@@ -1,7 +1,7 @@
 'use client';
 
 import { use } from 'react';
-import NotFound from '@/components/UI/NotFound';
+import NotFound from '@/components/layout/NotFound';
 import LoadingModal from '@/components/UI/LoadingModal';
 import useAuth from '@/hooks/useAuth';
 import KitchenPage from '@/components/client/kitchen/kitchen';

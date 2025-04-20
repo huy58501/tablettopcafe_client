@@ -15,9 +15,9 @@ export const useUpdateOrderStatus = () => {
     }
   };
 
-  const handleUpdateOrderPayment = async (id: number, payment: string) => {
+  const handleUpdateOrderPayment = async (id: number, payment: string, reference: string) => {
     try {
-      await updateOrderPayment({ variables: { orderId: id, payment } });
+      await updateOrderPayment({ variables: { orderId: id, payment, reference } });
     } catch (error) {
       console.error('Error updating order payment:', error);
     }

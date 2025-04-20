@@ -327,7 +327,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
               Object.entries(dishesByCategory).map(([category, dishes]) => (
                 <div key={category} className="mb-6">
                   <h3 className="text-base font-medium text-gray-700 mb-3">{category}</h3>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-2 cursor-pointer">
                     {(dishes as any[]).map((dish: any) => (
                       <button
                         key={dish.id}
@@ -336,10 +336,10 @@ const OrderModal: React.FC<OrderModalProps> = ({
                           handleAddOrUpdateItem(dish);
                         }}
                         className="flex flex-col items-center p-3 rounded-xl border border-gray-100 
-                                 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200"
+                                 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200 cursor-pointer"
                       >
                         <div className="text-2xl mb-1">{dish.image}</div>
-                        <div className="text-sm font-medium text-gray-800 text-center">
+                        <div className="text-sm font-medium text-gray-800 text-center cursor-pointer">
                           {dish.name}
                         </div>
                         <div className="text-sm text-gray-500">{formatCurrency(dish.price)}</div>
@@ -512,9 +512,9 @@ const OrderModal: React.FC<OrderModalProps> = ({
                           handleAddOrUpdateItem(dish);
                         }}
                         className="p-4 rounded-xl border-2 border-gray-100 hover:border-blue-500 
-                                 hover:bg-blue-50 transition-all duration-200 text-left group"
+                                 hover:bg-blue-50 transition-all duration-200 text-left group cursor-pointer"
                       >
-                        <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">
+                        <div className="text-3xl mb-2 group-hover:scale-110 transition-transform cursor-pointer">
                           {dish.image}
                         </div>
                         <div className="font-medium text-gray-800">{dish.name}</div>
@@ -549,7 +549,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
                         <div className="flex items-center space-x-2 bg-gray-50 rounded-lg p-1">
                           <button
                             onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
-                            className="p-1.5 hover:bg-gray-200 rounded-md transition-colors"
+                            className="p-1.5 hover:bg-gray-200 rounded-md transition-colors cursor-pointer"
                           >
                             <FaMinus className="text-gray-500 text-sm" />
                           </button>
@@ -558,14 +558,14 @@ const OrderModal: React.FC<OrderModalProps> = ({
                           </span>
                           <button
                             onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
-                            className="p-1.5 hover:bg-gray-200 rounded-md transition-colors"
+                            className="p-1.5 hover:bg-gray-200 rounded-md transition-colors cursor-pointer"
                           >
                             <FaPlus className="text-gray-500 text-sm" />
                           </button>
                         </div>
                         <button
                           onClick={() => handleRemoveItem(item.id)}
-                          className="p-1.5 text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                          className="p-1.5 text-red-500 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
                         >
                           <FaTrash className="text-sm" />
                         </button>
@@ -603,7 +603,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
                     onClose();
                   }}
                   className="flex-1 py-3 border border-gray-200 text-gray-700 font-medium 
-                           rounded-xl hover:bg-gray-50 transition-colors"
+                           rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -615,7 +615,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
                   disabled={order.orderItems.length === 0 || isSubmitting}
                   className="flex-1 py-3 bg-blue-600 text-white font-medium 
                            rounded-xl hover:bg-blue-700 transition-colors
-                           disabled:opacity-50 disabled:cursor-not-allowed"
+                           disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {isSubmitting ? 'Saving...' : 'Save Order'}
                 </button>

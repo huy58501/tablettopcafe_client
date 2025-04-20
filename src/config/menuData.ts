@@ -4,6 +4,10 @@ export const menuItemsAdmin = (username: string) => [
     href: `/${username}/dashboard`,
   },
   {
+    label: 'Quản Lý Tài Khoản',
+    href: `/${username}/accounts`,
+  },
+  {
     label: 'Quản Lý Đặt Bàn',
     href: `/${username}/table-reservations`,
   },
@@ -52,6 +56,10 @@ export const menuItemsAdminClientView = (username: string) => [
   {
     label: 'Quản Lý Đặt Bàn',
     href: `/${username}/table-reservations`,
+  },
+  {
+    label: 'Quản Lý Tài Khoản',
+    href: `/${username}/accounts`,
   },
   {
     label: 'Quản Lý Bàn',

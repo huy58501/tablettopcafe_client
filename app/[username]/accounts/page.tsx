@@ -1,17 +1,17 @@
 'use client';
 
 import { use, useEffect } from 'react';
-import AdminDashboard from '@/components/admin/dashboard/dashboard';
 import NotFound from '@/components/layout/NotFound';
 import LoadingModal from '@/components/UI/LoadingModal';
 import useAuth from '@/hooks/useAuth';
+import AccountPage from '@/components/admin/account/AccountPage';
 import { useRouter } from 'next/navigation';
 
 type PageParams = {
   username: string;
 };
 
-export default function DashboardPage({ params }: { params: Promise<PageParams> }) {
+export default function TableReservationsPage({ params }: { params: Promise<PageParams> }) {
   const { username } = use(params);
   const checkAuth = useAuth();
   const router = useRouter();
@@ -28,5 +28,5 @@ export default function DashboardPage({ params }: { params: Promise<PageParams> 
   if (isLoading) return <LoadingModal />;
   if (isUnauthorized) return <NotFound />;
 
-  return <AdminDashboard />;
+  return <AccountPage />;
 }

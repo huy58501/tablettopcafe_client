@@ -54,10 +54,11 @@ export const UPDATE_ORDER_STATUS = gql`
 `;
 
 export const UPDATE_ORDER_PAYMENT = gql`
-  mutation updateOrderPayment($orderId: Int!, $payment: String!) {
-    updateOrderPayment(orderId: $orderId, payment: $payment) {
+  mutation updateOrderPayment($orderId: Int!, $payment: String!, $reference: String!) {
+    updateOrderPayment(orderId: $orderId, payment: $payment, reference: $reference) {
       id
       payment
+      reference
     }
   }
 `;

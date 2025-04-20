@@ -52,7 +52,6 @@ const QRPayment: React.FC<QRPaymentProps> = ({
       reference: reference || '',
     });
     onComplete();
-    console.log('Payment Confirm from QR Payment', paymentMethod + ' ' + amount + ' ' + reference);
   };
 
   if (!isOpen) return null;
@@ -77,7 +76,7 @@ const QRPayment: React.FC<QRPaymentProps> = ({
               <h2 className="text-base font-semibold text-gray-800">Payment Options</h2>
               <button
                 onClick={handleClose}
-                className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+                className="p-1.5 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
               >
                 <FaTimes className="text-gray-500 w-4 h-4" />
               </button>
@@ -95,7 +94,7 @@ const QRPayment: React.FC<QRPaymentProps> = ({
                 <button
                   onClick={handlePayWithQR}
                   className="w-full py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 
-                           transition-colors flex items-center justify-center gap-2 text-sm"
+                           transition-colors flex items-center justify-center gap-2 text-sm cursor-pointer"
                 >
                   <FaQrcode className="w-4 h-4" />
                   Pay with QR Code
@@ -104,7 +103,7 @@ const QRPayment: React.FC<QRPaymentProps> = ({
                 <button
                   onClick={handlePaymentConfirm}
                   className="w-full py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 
-                           transition-colors flex items-center justify-center gap-2 text-sm"
+                           transition-colors flex items-center justify-center gap-2 text-sm cursor-pointer"
                 >
                   <FaMoneyBill className="w-4 h-4" />
                   Pay with Cash
@@ -113,7 +112,7 @@ const QRPayment: React.FC<QRPaymentProps> = ({
                 <button
                   onClick={handleClose}
                   className="w-full py-2 border border-gray-200 text-gray-700 rounded-xl 
-                           hover:bg-gray-50 transition-colors text-sm"
+                           hover:bg-gray-50 transition-colors text-sm cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -126,7 +125,7 @@ const QRPayment: React.FC<QRPaymentProps> = ({
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleBack}
-                  className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+                  className="p-1.5 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
                 >
                   <FaArrowLeft className="text-gray-500 w-4 h-4" />
                 </button>
@@ -134,7 +133,7 @@ const QRPayment: React.FC<QRPaymentProps> = ({
               </div>
               <button
                 onClick={handleClose}
-                className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+                className="p-1.5 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
               >
                 <FaTimes className="text-gray-500 w-4 h-4" />
               </button>
@@ -185,7 +184,7 @@ const QRPayment: React.FC<QRPaymentProps> = ({
                 onClick={handlePaymentConfirm}
                 className="w-full py-2.5 bg-blue-600 text-white rounded-xl 
                          hover:bg-blue-700 transition-colors text-sm font-medium
-                         flex items-center justify-center gap-2"
+                         flex items-center justify-center gap-2 cursor-pointer"
               >
                 <FaCheck className="w-3.5 h-3.5" />
                 Payment Complete

@@ -8,45 +8,112 @@ import {
   FaChevronRight,
   FaTimes,
   FaCheck,
+  FaSpinner,
 } from 'react-icons/fa';
 import ShiftChecklist from './ShiftChecklist';
 import ShiftReport from './ShiftReport';
-
-interface ShiftState {
-  isActive: boolean;
-  startTime: string | null;
-  endTime: string | null;
-}
+import { useCreateClockIn } from '@/hooks/useClockInRecord';
+import { User } from '@/services/userServices';
 
 const ShiftManager: React.FC = () => {
-  const [shift, setShift] = useState<ShiftState>({
-    isActive: false,
-    startTime: null,
-    endTime: null,
-  });
   const [showChecklist, setShowChecklist] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [checklistCompleted, setChecklistCompleted] = useState(false);
+  const { handleCreateClockIn, handleUpdateClockIn } = useCreateClockIn();
+  const [user, setUser] = useState<User | null>(null);
+  const [activeClockIn, setActiveClockIn] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isEndingShift, setIsEndingShift] = useState(false);
 
-  const handleStartShift = () => {
-    setShift({
-      isActive: true,
-      startTime: new Date().toISOString(),
-      endTime: null,
-    });
+  useEffect(() => {
+    const fetchUser = async () => {
+      setIsLoading(true);
+      try {
+        const response = await fetch('/api/get-me', {
+          method: 'POST',
+          credentials: 'include',
+        });
+        const data = await response.json();
+        setUser(data.user);
+
+        // Check if there's an active clock-in record
+        if (data.user.clockIns && data.user.clockIns.length > 0) {
+          const activeRecord = data.user.clockIns.find((record: any) => record.status === 'active');
+          if (activeRecord) {
+            setActiveClockIn(activeRecord);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchUser();
+  }, []);
+
+  const handleStartShift = async () => {
+    if (!user) return;
+
+    setIsLoading(true);
+    try {
+      await handleCreateClockIn(user.id);
+      // Refresh user data after creating clock in
+      const response = await fetch('/api/get-me', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await response.json();
+      setUser(data.user);
+
+      // Update active clock in
+      if (data.user.clockIns && data.user.clockIns.length > 0) {
+        const activeRecord = data.user.clockIns.find((record: any) => record.status === 'active');
+        if (activeRecord) {
+          setActiveClockIn(activeRecord);
+        }
+      }
+    } catch (error) {
+      console.error('Error starting shift:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleEndShift = () => {
+  const handleEndShift = async () => {
     if (!checklistCompleted) {
       setShowChecklist(true);
       return;
     }
-    setShift(prev => ({
-      ...prev,
-      isActive: false,
-      endTime: new Date().toISOString(),
-    }));
-    setShowReport(true);
+
+    setIsEndingShift(true);
+    try {
+      if (user) {
+        await handleUpdateClockIn(user.id, '', 'inactive');
+        // Refresh user data after updating clock in
+        const response = await fetch('/api/get-me', {
+          method: 'POST',
+          credentials: 'include',
+        });
+        const data = await response.json();
+        setUser(data.user);
+
+        // Update active clock in
+        if (data.user.clockIns && data.user.clockIns.length > 0) {
+          const activeRecord = data.user.clockIns.find((record: any) => record.status === 'active');
+          if (activeRecord) {
+            setActiveClockIn(activeRecord);
+          } else {
+            setActiveClockIn(null);
+          }
+        }
+      }
+      setShowReport(true);
+    } catch (error) {
+      console.error('Error ending shift:', error);
+    } finally {
+      setIsEndingShift(false);
+    }
   };
 
   const formatTime = (isoString: string | null) => {
@@ -57,18 +124,41 @@ const ShiftManager: React.FC = () => {
     });
   };
 
+  // Determine if user has an active shift
+  const hasActiveShift = user?.clockIns?.some((record: any) => record.status === 'active') || false;
+
   return (
     <div className="min-h-screen bg-gray-50 p-4">
+      {/* Loading Spinner Modal */}
+      {isLoading && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 flex flex-col items-center gap-4 shadow-xl">
+            <FaSpinner className="w-8 h-8 text-blue-500 animate-spin" />
+            <p className="text-gray-700 font-medium">Loading...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Ending Shift Spinner Modal */}
+      {isEndingShift && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 flex flex-col items-center gap-4 shadow-xl">
+            <FaSpinner className="w-8 h-8 text-blue-500 animate-spin" />
+            <p className="text-gray-700 font-medium">Ending Shift...</p>
+          </div>
+        </div>
+      )}
+
       {/* Shift Status Card */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-800">Current Shift</h2>
           <span
             className={`px-3 py-1 rounded-full text-sm font-medium ${
-              shift.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+              hasActiveShift ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
             }`}
           >
-            {shift.isActive ? 'Active' : 'Inactive'}
+            {hasActiveShift ? 'Active' : 'Inactive'}
           </span>
         </div>
 
@@ -79,7 +169,7 @@ const ShiftManager: React.FC = () => {
               <span className="text-sm text-gray-600">Start Time:</span>
             </div>
             <span className="text-sm font-medium text-gray-800">
-              {shift.startTime ? formatTime(shift.startTime) : '-'}
+              {activeClockIn ? formatTime(activeClockIn.clockIn) : '-'}
             </span>
           </div>
 
@@ -89,7 +179,7 @@ const ShiftManager: React.FC = () => {
               <span className="text-sm text-gray-600">End Time:</span>
             </div>
             <span className="text-sm font-medium text-gray-800">
-              {shift.endTime ? formatTime(shift.endTime) : '-'}
+              {activeClockIn?.clockOut ? formatTime(activeClockIn.clockOut) : '-'}
             </span>
           </div>
         </div>
@@ -98,24 +188,27 @@ const ShiftManager: React.FC = () => {
       {/* Quick Actions */}
       <div className="space-y-3">
         <button
-          onClick={shift.isActive ? handleEndShift : handleStartShift}
+          onClick={hasActiveShift ? handleEndShift : handleStartShift}
+          disabled={isLoading || isEndingShift}
           className={`w-full py-3 rounded-xl text-white font-medium flex items-center justify-center gap-2 
-                     transition-colors ${
-                       shift.isActive
+                     transition-colors cursor-pointer ${
+                       hasActiveShift
                          ? 'bg-red-600 hover:bg-red-700'
                          : 'bg-green-600 hover:bg-green-700'
-                     }`}
+                     } disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           <FaClock className="w-4 h-4" />
-          {shift.isActive ? 'End Shift' : 'Start Shift'}
+          {hasActiveShift ? 'End Shift' : 'Start Shift'}
         </button>
 
-        {shift.isActive && (
+        {hasActiveShift && (
           <>
             <button
               onClick={() => setShowChecklist(true)}
+              disabled={isLoading || isEndingShift}
               className="w-full py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 
-                       transition-colors flex items-center justify-center gap-2"
+                       transition-colors flex items-center justify-center gap-2 cursor-pointer
+                       disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <FaClipboardCheck className="w-4 h-4" />
               View Checklist
@@ -123,8 +216,10 @@ const ShiftManager: React.FC = () => {
 
             <button
               onClick={() => setShowReport(true)}
+              disabled={isLoading || isEndingShift}
               className="w-full py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 
-                       transition-colors flex items-center justify-center gap-2"
+                       transition-colors flex items-center justify-center gap-2 cursor-pointer
+                       disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <FaReceipt className="w-4 h-4" />
               View Report
@@ -149,8 +244,8 @@ const ShiftManager: React.FC = () => {
         isOpen={showReport}
         onClose={() => setShowReport(false)}
         shift={{
-          startTime: shift.startTime || '',
-          endTime: shift.endTime || '',
+          startTime: activeClockIn?.clockIn || '',
+          endTime: activeClockIn?.clockOut || '',
         }}
       />
     </div>

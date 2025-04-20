@@ -1,9 +1,9 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@apollo/client';
-import { GET_ALL_BOOKINGS } from '@/services/bookingServices';
-import { GET_ORDERS } from '@/services/orderServices';
-import { GET_ALL_TABLES } from '@/services/tableServices';
+import { GET_ORDERS } from '../../../services/orderServices';
+import { GET_ALL_BOOKINGS } from '../../../services/bookingServices';
+import { GET_ALL_TABLES } from '../../../services/tableServices';
 import {
   BarChart,
   Bar,
@@ -13,327 +13,266 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  LineChart,
-  Line,
   PieChart,
   Pie,
   Cell,
 } from 'recharts';
-import {
-  format,
-  startOfWeek,
-  endOfWeek,
-  eachDayOfInterval,
-  parseISO,
-  isWithinInterval,
-} from 'date-fns';
+import { format, parseISO } from 'date-fns';
+import SpinningModal from '@/components/UI/SpinningModal';
 
 interface Analytics {
   totalRevenue: number;
-  averageOrderValue: number;
-  totalBookings: number;
   totalOrders: number;
-  occupancyRate: number;
-  peakHours: any[];
-  popularTables: any[];
-  revenueByDay: { date: string; revenue: number }[];
-  bookingsByType: { type: string; count: number }[];
-  orderStatusDistribution: { status: string; count: number }[];
+  totalBookings: number;
+  averagePeoplePerBooking: number;
+  revenueByDay: { [key: string]: number };
+  bookingDistribution: { [key: string]: number };
+  orderStatusDistribution: { [key: string]: number };
+  popularItems: { name: string; count: number }[];
 }
 
 const Reports = () => {
-  // Date range state
-  const [dateRange, setDateRange] = useState<'today' | 'week' | 'month'>('today');
-  const [startDate, setStartDate] = useState(new Date());
-  const [endDate, setEndDate] = useState(new Date());
+  // Set initial date range to next 7 days (as shown in the image)
+  const today = new Date();
+  const nextWeek = new Date();
+  nextWeek.setDate(today.getDate() + 7);
 
-  // Fetch data
-  const { data: bookingsData } = useQuery(GET_ALL_BOOKINGS);
-  const { data: ordersData } = useQuery(GET_ORDERS);
-  const { data: tablesData } = useQuery(GET_ALL_TABLES);
-
-  // Analytics state
+  const [startDate, setStartDate] = useState<string>(format(today, 'yyyy-MM-dd'));
+  const [endDate, setEndDate] = useState<string>(format(nextWeek, 'yyyy-MM-dd'));
   const [analytics, setAnalytics] = useState<Analytics>({
     totalRevenue: 0,
-    averageOrderValue: 0,
-    totalBookings: 0,
     totalOrders: 0,
-    occupancyRate: 0,
-    peakHours: [],
-    popularTables: [],
-    revenueByDay: [],
-    bookingsByType: [],
-    orderStatusDistribution: [],
+    totalBookings: 0,
+    averagePeoplePerBooking: 0,
+    revenueByDay: {},
+    bookingDistribution: {},
+    orderStatusDistribution: {},
+    popularItems: [],
   });
 
-  // Add formatter function
-  const formatVND = (amount: number) => {
+  const { loading: ordersLoading, data: ordersData } = useQuery(GET_ORDERS);
+  const { loading: bookingsLoading, data: bookingsData } = useQuery(GET_ALL_BOOKINGS);
+  const { loading: tablesLoading, data: tablesData } = useQuery(GET_ALL_TABLES);
+
+  const isLoading = ordersLoading || bookingsLoading || tablesLoading;
+
+  useEffect(() => {
+    if (ordersData?.allOrders && bookingsData?.allBooking && tablesData?.allTable) {
+      const startDateTime = new Date(startDate);
+      const endDateTime = new Date(endDate);
+      endDateTime.setHours(23, 59, 59, 999); // Include the entire end date
+
+      const orders = ordersData.allOrders.filter((order: any) => {
+        const orderDate = new Date(Number(order.createdAt));
+        return orderDate >= startDateTime && orderDate <= endDateTime;
+      });
+
+      const bookings = bookingsData.allBooking.filter((booking: any) => {
+        const bookingDate = new Date(Number(booking.reservationDate));
+        return bookingDate >= startDateTime && bookingDate <= endDateTime;
+      });
+
+      // Calculate total revenue
+      const totalRevenue = orders.reduce((sum: number, order: any) => sum + order.total, 0);
+
+      // Calculate revenue by day
+      const revenueByDay: { [key: string]: number } = {};
+      orders.forEach((order: any) => {
+        const date = format(new Date(Number(order.createdAt)), 'yyyy-MM-dd');
+        revenueByDay[date] = (revenueByDay[date] || 0) + order.total;
+      });
+
+      // Calculate booking distribution
+      const bookingDistribution: { [key: string]: number } = {};
+      bookings.forEach((booking: any) => {
+        const type = booking.bookingType || 'walk-in';
+        bookingDistribution[type] = (bookingDistribution[type] || 0) + 1;
+      });
+
+      // Calculate order status distribution
+      const orderStatusDistribution: { [key: string]: number } = {};
+      orders.forEach((order: any) => {
+        orderStatusDistribution[order.status] = (orderStatusDistribution[order.status] || 0) + 1;
+      });
+
+      // Calculate popular items
+      const itemCounts: { [key: string]: number } = {};
+      orders.forEach((order: any) => {
+        order.orderItems?.forEach((item: any) => {
+          const itemName = item.dish.name;
+          itemCounts[itemName] = (itemCounts[itemName] || 0) + item.quantity;
+        });
+      });
+
+      const popularItems = Object.entries(itemCounts)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+
+      // Calculate average people per booking
+      const totalPeople = bookings.reduce(
+        (sum: number, booking: any) => sum + (booking.peopleCount || 0),
+        0
+      );
+      const averagePeoplePerBooking = bookings.length > 0 ? totalPeople / bookings.length : 0;
+
+      setAnalytics({
+        totalRevenue,
+        totalOrders: orders.length,
+        totalBookings: bookings.length,
+        averagePeoplePerBooking,
+        revenueByDay,
+        bookingDistribution,
+        orderStatusDistribution,
+        popularItems,
+      });
+    }
+  }, [ordersData, bookingsData, tablesData, startDate, endDate]);
+
+  const formatAmount = (amount: number) => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
       currency: 'VND',
-      minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
   };
 
-  // Calculate date range
-  useEffect(() => {
-    const now = new Date();
-    switch (dateRange) {
-      case 'today':
-        setStartDate(new Date(now.setHours(0, 0, 0, 0)));
-        setEndDate(new Date(now.setHours(23, 59, 59, 999)));
-        break;
-      case 'week':
-        setStartDate(startOfWeek(now));
-        setEndDate(endOfWeek(now));
-        break;
-      case 'month':
-        setStartDate(new Date(now.getFullYear(), now.getMonth(), 1));
-        setEndDate(new Date(now.getFullYear(), now.getMonth() + 1, 0));
-        break;
-    }
-  }, [dateRange]);
-
-  // Process data when it changes
-  useEffect(() => {
-    if (bookingsData && ordersData && tablesData) {
-      const filteredOrders = ordersData.allOrders.filter((order: any) => {
-        const orderDate = new Date(parseInt(order.createdAt));
-        return isWithinInterval(orderDate, { start: startDate, end: endDate });
-      });
-
-      const filteredBookings = bookingsData.allBooking.filter((booking: any) => {
-        const bookingDate = parseISO(booking.reservationDate);
-        return isWithinInterval(bookingDate, { start: startDate, end: endDate });
-      });
-
-      // Calculate analytics
-      const totalRevenue = filteredOrders.reduce((sum: number, order: any) => sum + order.total, 0);
-      const averageOrderValue = totalRevenue / filteredOrders.length || 0;
-
-      // Calculate occupancy rate
-      const totalTables = tablesData.allTable.length;
-      const occupiedTables = tablesData.allTable.filter(
-        (table: any) => table.status === 'occupied'
-      ).length;
-      const occupancyRate = (occupiedTables / totalTables) * 100;
-
-      // Calculate revenue by day
-      const revenueByDay = eachDayOfInterval({ start: startDate, end: endDate }).map(day => {
-        const dayOrders = filteredOrders.filter((order: any) => {
-          const orderDate = new Date(parseInt(order.createdAt));
-          return orderDate.toDateString() === day.toDateString();
-        });
-        return {
-          date: format(day, 'MM/dd'),
-          revenue: dayOrders.reduce((sum: number, order: any) => sum + order.total, 0),
-        };
-      });
-
-      // Calculate booking distribution by type
-      const bookingsByType: { type: string; count: number }[] = Object.entries(
-        filteredBookings.reduce((acc: Record<string, number>, booking: any) => {
-          acc[booking.bookingType] = (acc[booking.bookingType] || 0) + 1;
-          return acc;
-        }, {})
-      ).map(([type, count]) => ({
-        type,
-        count: count as number,
-      }));
-
-      // Calculate order status distribution
-      const orderStatusDistribution: { status: string; count: number }[] = Object.entries(
-        filteredOrders.reduce((acc: Record<string, number>, order: any) => {
-          acc[order.status] = (acc[order.status] || 0) + 1;
-          return acc;
-        }, {})
-      ).map(([status, count]) => ({
-        status,
-        count: count as number,
-      }));
-
-      setAnalytics({
-        totalRevenue,
-        averageOrderValue,
-        totalBookings: filteredBookings.length,
-        totalOrders: filteredOrders.length,
-        occupancyRate,
-        peakHours: [], // TODO: Implement peak hours calculation
-        popularTables: [], // TODO: Implement popular tables calculation
-        revenueByDay,
-        bookingsByType,
-        orderStatusDistribution,
-      });
-    }
-  }, [bookingsData, ordersData, tablesData, startDate, endDate]);
-
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
   return (
-    <div className="min-h-screen bg-slate-900 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-white mb-4">Analytics & Reports</h1>
-          <div className="flex gap-4">
-            <button
-              onClick={() => setDateRange('today')}
-              className={`px-4 py-2 rounded-lg ${
-                dateRange === 'today'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white/5 text-gray-300 hover:bg-white/10'
-              }`}
-            >
-              Today
-            </button>
-            <button
-              onClick={() => setDateRange('week')}
-              className={`px-4 py-2 rounded-lg ${
-                dateRange === 'week'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white/5 text-gray-300 hover:bg-white/10'
-              }`}
-            >
-              This Week
-            </button>
-            <button
-              onClick={() => setDateRange('month')}
-              className={`px-4 py-2 rounded-lg ${
-                dateRange === 'month'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white/5 text-gray-300 hover:bg-white/10'
-              }`}
-            >
-              This Month
-            </button>
+    <div className="p-4 bg-gray-50 min-h-screen">
+      <div className="mb-6 flex space-x-4">
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+          <input
+            type="date"
+            value={startDate}
+            onChange={e => setStartDate(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+          <input
+            type="date"
+            value={endDate}
+            onChange={e => setEndDate(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <h3 className="text-sm font-medium text-gray-500 mb-1">Total Revenue</h3>
+          <p className="text-2xl font-bold text-blue-600">{formatAmount(analytics.totalRevenue)}</p>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <h3 className="text-sm font-medium text-gray-500 mb-1">Total Orders</h3>
+          <p className="text-2xl font-bold text-green-600">{analytics.totalOrders}</p>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <h3 className="text-sm font-medium text-gray-500 mb-1">Total Bookings</h3>
+          <p className="text-2xl font-bold text-purple-600">{analytics.totalBookings}</p>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <h3 className="text-sm font-medium text-gray-500 mb-1">Avg. People/Booking</h3>
+          <p className="text-2xl font-bold text-orange-600">
+            {analytics.averagePeoplePerBooking.toFixed(1)}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Revenue by Day</h3>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={Object.entries(analytics.revenueByDay).map(([date, revenue]) => ({
+                  date,
+                  revenue,
+                }))}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip formatter={(value: any) => formatAmount(value)} />
+                <Bar dataKey="revenue" fill="#0088FE" />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white/5 backdrop-blur-lg rounded-xl p-4 border border-white/10">
-            <h3 className="text-gray-400 text-sm">Total Revenue</h3>
-            <p className="text-2xl font-bold text-white">{formatVND(analytics.totalRevenue)}</p>
-          </div>
-          <div className="bg-white/5 backdrop-blur-lg rounded-xl p-4 border border-white/10">
-            <h3 className="text-gray-400 text-sm">Average Order Value</h3>
-            <p className="text-2xl font-bold text-white">
-              {formatVND(analytics.averageOrderValue)}
-            </p>
-          </div>
-          <div className="bg-white/5 backdrop-blur-lg rounded-xl p-4 border border-white/10">
-            <h3 className="text-gray-400 text-sm">Total Bookings</h3>
-            <p className="text-2xl font-bold text-white">{analytics.totalBookings}</p>
-          </div>
-          <div className="bg-white/5 backdrop-blur-lg rounded-xl p-4 border border-white/10">
-            <h3 className="text-gray-400 text-sm">Current Occupancy</h3>
-            <p className="text-2xl font-bold text-white">{Math.round(analytics.occupancyRate)}%</p>
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Booking Distribution</h3>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={Object.entries(analytics.bookingDistribution).map(([type, count]) => ({
+                    name: type,
+                    value: count,
+                  }))}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={100}
+                  label
+                >
+                  {Object.entries(analytics.bookingDistribution).map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Charts */}
-        <div className="space-y-8">
-          {/* Revenue Chart */}
-          <div className="bg-white/5 backdrop-blur-lg rounded-xl p-4 border border-white/10">
-            <h3 className="text-lg font-medium text-white mb-4">Revenue Trend</h3>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={analytics.revenueByDay}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
-                  <XAxis dataKey="date" stroke="#ffffff60" />
-                  <YAxis
-                    stroke="#ffffff60"
-                    tickFormatter={value => formatVND(value).replace('₫', '')}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#1f2937',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                    }}
-                    formatter={(value: any) => [formatVND(value), 'Revenue']}
-                  />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="revenue"
-                    stroke="#3b82f6"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Order Status Distribution</h3>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={Object.entries(analytics.orderStatusDistribution).map(
+                    ([status, count]) => ({ name: status, value: count })
+                  )}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={100}
+                  label
+                >
+                  {Object.entries(analytics.orderStatusDistribution).map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
+        </div>
 
-          {/* Booking Types and Order Status */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Booking Types */}
-            <div className="bg-white/5 backdrop-blur-lg rounded-xl p-4 border border-white/10">
-              <h3 className="text-lg font-medium text-white mb-4">Booking Types</h3>
-              <div className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={analytics.bookingsByType}
-                      dataKey="count"
-                      nameKey="type"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      fill="#8884d8"
-                      label
-                    >
-                      {analytics.bookingsByType.map((entry: any, index: number) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: '#1f2937',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                      }}
-                    />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Popular Items</h3>
+          <div className="space-y-4">
+            {analytics.popularItems.map((item, index) => (
+              <div key={index} className="flex justify-between items-center">
+                <span className="text-gray-700">{item.name}</span>
+                <span className="font-semibold">{item.count} orders</span>
               </div>
-            </div>
-
-            {/* Order Status */}
-            <div className="bg-white/5 backdrop-blur-lg rounded-xl p-4 border border-white/10">
-              <h3 className="text-lg font-medium text-white mb-4">Order Status Distribution</h3>
-              <div className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={analytics.orderStatusDistribution}
-                      dataKey="count"
-                      nameKey="status"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      fill="#8884d8"
-                      label
-                    >
-                      {analytics.orderStatusDistribution.map((entry: any, index: number) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: '#1f2937',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                      }}
-                    />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>
+
+      <SpinningModal isOpen={isLoading} message="Loading reports data..." />
     </div>
   );
 };

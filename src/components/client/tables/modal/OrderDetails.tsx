@@ -11,10 +11,12 @@ import {
   FaClipboard,
   FaClock,
   FaExchangeAlt,
+  FaCheck,
 } from 'react-icons/fa';
 import { OrderItem } from '@/types/table';
 import { ExtendedOrder } from '../Tables';
 import QRPayment from './QRPayment';
+import SpinningModal from '@/components/UI/SpinningModal';
 
 interface OrderDetailsProps {
   order: ExtendedOrder;
@@ -27,6 +29,7 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onClose, onSplitBill
   const [isQRPaymentOpen, setIsQRPaymentOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [paymentReference, setPaymentReference] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Handle click outside modal
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -41,8 +44,8 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onClose, onSplitBill
   };
 
   const handlePayment = () => {
-    setPaymentAmount(order.total || 0);
-    setPaymentReference(`Order #${order.id}`);
+    setPaymentAmount(order.total);
+    setPaymentReference(`Table ${order.tableId} - Order #${order.id}`);
     setIsQRPaymentOpen(true);
   };
 
@@ -51,155 +54,176 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onClose, onSplitBill
     onClose();
   };
 
-  const handlePaymentConfirm = (paymentData: {
+  const handlePaymentConfirm = async (paymentData: {
     paymentMethod: string;
     amount: number;
     reference: string;
   }) => {
-    handlePaymentComplete();
-    console.log(
-      'Payment Confirm from Order Details',
-      paymentData.paymentMethod + ' ' + paymentData.amount + ' ' + paymentData.reference
-    );
-    onConfirm({
-      paymentMethod: paymentData.paymentMethod,
-      amount: paymentData.amount,
-      reference: paymentData.reference,
-    });
+    setIsProcessing(true);
+    try {
+      await onConfirm({
+        paymentMethod: paymentData.paymentMethod,
+        amount: paymentData.amount,
+        reference: paymentData.reference,
+      });
+      handlePaymentComplete();
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-      onClick={e => e.target === e.currentTarget && onClose()}
-    >
+    <>
+      <SpinningModal isOpen={isProcessing} message="Processing payment..." />
       <motion.div
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-white w-full max-w-md rounded-2xl overflow-hidden shadow-xl"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-white md:bg-gray-800/80 flex items-start md:items-center justify-center z-50"
+        onClick={e => e.target === e.currentTarget && onClose()}
       >
-        {/* Header */}
-        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-gray-800">Order Details</h2>
-          <button
-            onClick={onClose}
-            className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <FaTimes className="text-gray-500 w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-4">
-          {/* Customer Info */}
-          <div className="bg-gray-50 rounded-xl p-4 space-y-2 mb-4">
-            <div className="flex items-center gap-2">
-              <FaUser className="text-gray-400 w-4 h-4" />
-              <span className="text-sm text-gray-600">Customer:</span>
-              <span className="text-sm font-medium text-gray-800">
-                {order.customerName || 'Not specified'}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <FaClipboard className="text-gray-400 w-4 h-4" />
-              <span className="text-sm text-gray-600">Note:</span>
-              <span className="text-sm font-medium text-gray-800">
-                {order.customerNote || 'None'}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <FaClock className="text-gray-400 w-4 h-4" />
-              <span className="text-sm text-gray-600">Status:</span>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                {order.status}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <FaMoneyBill className="text-gray-400 w-4 h-4" />
-              <span className="text-sm text-gray-600">Total:</span>
-              <span className="text-sm font-semibold text-blue-600">
-                {formatCurrency(order.total)}
-              </span>
-            </div>
-          </div>
-
-          {/* Order Items */}
-          <div className="space-y-2 mb-4">
-            {order.orderItems.map((item, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-800">{item.quantity}x</span>
-                  <div>
-                    <p className="text-sm font-medium text-gray-800">{item.dish.name}</p>
-                    {item.notes && <p className="text-xs text-gray-500">Note: {item.notes}</p>}
-                  </div>
-                </div>
-                <span className="text-sm font-medium text-gray-600">
-                  {formatCurrency(item.price * item.quantity)}
-                </span>
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.9, opacity: 0 }}
+          className="bg-white w-full h-[100dvh] md:h-auto md:rounded-2xl md:w-full md:max-w-[1000px] md:max-h-[90vh] overflow-hidden shadow-2xl flex flex-col"
+        >
+          {/* Header */}
+          <div className="bg-gray-50 px-4 md:px-6 py-3 md:py-4 border-b border-gray-200 flex-none">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-lg md:text-xl font-semibold text-gray-800">Order Details</h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  Table {order.tableId} • {order.orderItems.length} items
+                </p>
               </div>
-            ))}
+              <button
+                onClick={onClose}
+                className="p-2 rounded-full hover:bg-gray-200 transition-colors cursor-pointer"
+              >
+                <FaTimes className="text-gray-600" />
+              </button>
+            </div>
           </div>
 
-          {/* Total */}
-          <div className="flex justify-between items-center py-3 border-t border-gray-100 mb-4">
-            <span className="text-base font-medium text-gray-700">Total Amount:</span>
-            <span className="text-base font-semibold text-blue-600">
-              {formatCurrency(order.total)}
-            </span>
+          {/* Content - Scrollable */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-4 md:p-6 space-y-6">
+              {/* Customer Info if available */}
+              {(order.customerName || order.customerNote) && (
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                  {order.customerName && (
+                    <div className="flex items-center gap-2 mb-2">
+                      <FaUser className="text-blue-500" />
+                      <span className="text-sm font-medium text-blue-700">
+                        {order.customerName}
+                      </span>
+                    </div>
+                  )}
+                  {order.customerNote && (
+                    <div className="flex items-center gap-2">
+                      <FaStickyNote className="text-blue-500" />
+                      <span className="text-sm text-blue-700">{order.customerNote}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Order Items */}
+              <div className="space-y-3">
+                {order.orderItems.map((item, index) => (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 flex-1">
+                        <span className="font-medium text-gray-700">x{item.quantity}</span>
+                        <span className="font-medium text-gray-800">{item.dish.name}</span>
+                      </div>
+                      <span className="font-medium text-gray-600 ml-4">
+                        {formatCurrency(item.price * item.quantity)}
+                      </span>
+                    </div>
+                    {item.notes && (
+                      <p className="text-sm text-gray-500 mt-2 italic pl-6">{item.notes}</p>
+                    )}
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Order Summary */}
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Subtotal</span>
+                    <span className="font-semibold text-gray-800">
+                      {formatCurrency(order.total)}
+                    </span>
+                  </div>
+                  {/* <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">VAT (10%)</span>
+                    <span className="font-medium text-gray-800">
+                      {formatCurrency(order.total * 0.1)}
+                    </span>
+                  </div>
+                  <div className="border-t border-gray-200 my-2"></div>
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-800">Total</span>
+                    <span className="font-semibold text-blue-600">
+                      {formatCurrency(order.total * 1.1)}
+                    </span>
+                  </div> */}
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              onClick={handlePayment}
-              className="col-span-1 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 
-                       transition-colors flex items-center justify-center gap-2 text-sm"
-            >
-              <FaMoneyBill className="w-4 h-4" />
-              <span className="hidden sm:inline">Pay</span>
-              <span className="sm:hidden">Pay</span>
-            </button>
-            <button
-              onClick={onSplitBill}
-              className="col-span-1 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 
-                       transition-colors flex items-center justify-center gap-2 text-sm"
-            >
-              <FaExchangeAlt className="w-4 h-4" />
-              <span className="hidden sm:inline">Split</span>
-              <span className="sm:hidden">Split</span>
-            </button>
-            <button
-              onClick={onClose}
-              className="col-span-1 py-2.5 border border-gray-200 text-gray-700 rounded-xl 
-                       hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 text-sm"
-            >
-              <FaTimes className="w-4 h-4" />
-              <span className="hidden sm:inline">Close</span>
-              <span className="sm:hidden">Close</span>
-            </button>
+          {/* Bottom Actions Bar - Fixed on Mobile */}
+          <div className="bg-white border-t border-gray-200 p-4 md:p-6 flex-none">
+            <div className="flex gap-2 max-w-[1000px] mx-auto">
+              <button
+                onClick={onClose}
+                className="flex-1 py-2.5 md:py-3 px-3 md:px-4 border border-gray-200 text-gray-700 font-medium 
+                         rounded-xl hover:bg-gray-50 transition-colors text-sm cursor-pointer"
+              >
+                Close
+              </button>
+              <button
+                onClick={onSplitBill}
+                className="flex-1 py-2.5 md:py-3 px-3 md:px-4 bg-blue-600 text-white font-medium rounded-xl 
+                         hover:bg-blue-700 transition-colors text-sm flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <FaMoneyBill className="text-sm" />
+                Split Bill
+              </button>
+              <button
+                onClick={handlePayment}
+                className="flex-1 py-2.5 md:py-3 px-3 md:px-4 bg-green-600 text-white font-medium rounded-xl 
+                         hover:bg-green-700 transition-colors text-sm flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <FaCheck className="text-sm" />
+                Pay Now
+              </button>
+            </div>
           </div>
-        </div>
+        </motion.div>
+
+        {/* QR Payment Modal */}
+        <QRPayment
+          isOpen={isQRPaymentOpen}
+          onClose={() => setIsQRPaymentOpen(false)}
+          onComplete={handlePaymentComplete}
+          amount={paymentAmount}
+          tableId={order.tableId}
+          reference={paymentReference}
+          onConfirm={handlePaymentConfirm}
+        />
       </motion.div>
-
-      {/* QR Payment Modal */}
-      <QRPayment
-        isOpen={isQRPaymentOpen}
-        onClose={() => setIsQRPaymentOpen(false)}
-        onComplete={handlePaymentComplete}
-        amount={paymentAmount}
-        tableId={order.tableId}
-        reference={paymentReference}
-        onConfirm={handlePaymentConfirm}
-      />
-    </motion.div>
+    </>
   );
 };
 

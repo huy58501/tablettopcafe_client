@@ -13,6 +13,7 @@ import { ExtendedOrder } from '../Tables';
 import QRPayment from './QRPayment';
 
 interface SplitBillProps {
+  setIsLoading?: (loading: boolean) => void;
   isOpen: boolean;
   onClose: () => void;
   order: ExtendedOrder;
@@ -38,19 +39,24 @@ interface SplitItem extends OrderItem {
   name: string;
 }
 
-interface SplitBillState {
+export interface SplitBillState {
   items: SplitItem[];
   total: number;
-}
-
-interface FinalSplitData {
-  splits: SplitBillState[];
   paymentMethod: string;
-  amount: number;
   reference: string;
 }
 
-const SplitBill: React.FC<SplitBillProps> = ({ isOpen, onClose, order, onConfirm }) => {
+export interface FinalSplitData {
+  splits: SplitBillState[];
+}
+
+const SplitBill: React.FC<SplitBillProps> = ({
+  isOpen,
+  onClose,
+  order,
+  onConfirm,
+  setIsLoading,
+}) => {
   // Initialize items with split quantities
   const [items, setItems] = useState<SplitItem[]>([]);
   const [bill1Items, setBill1Items] = useState<SplitItem[]>([]);
@@ -156,7 +162,6 @@ const SplitBill: React.FC<SplitBillProps> = ({ isOpen, onClose, order, onConfirm
   };
 
   const handleSplitConfirm = () => {
-    console.log('paymentCompleted', paymentCompleted);
     if (!paymentCompleted) {
       // Show QR payment modal first
       handlePayment(bill2Total, `Table ${order.tableId} - Split ${splitStep}`);
@@ -164,17 +169,11 @@ const SplitBill: React.FC<SplitBillProps> = ({ isOpen, onClose, order, onConfirm
   };
 
   const handleFinalConfirm = (splitsBill: SplitBillState[]) => {
+    // Set loading state before sending final data
+    setIsLoading?.(true);
     onConfirm({
       splits: splitsBill,
-      paymentMethod: 'Tiền Mặt',
-      amount: paymentAmount,
-      reference: paymentReference,
     });
-    console.log('Split Bill');
-    console.log('splitsBill', splitsBill);
-    console.log('paymentAmount', paymentAmount);
-    console.log('paymentReference', paymentReference);
-    console.log('paymentMethod', 'Tiền Mặt');
   };
 
   const handleCancel = () => {
@@ -213,21 +212,26 @@ const SplitBill: React.FC<SplitBillProps> = ({ isOpen, onClose, order, onConfirm
     const newSplit: SplitBillState = {
       items: bill2Items,
       total: paymentData.amount,
+      paymentMethod: paymentData.paymentMethod,
+      reference: paymentData.reference,
     };
 
     setCompletedSplits([...completedSplits, newSplit]);
+
+    // Set loading state before processing final data
+    setIsLoading?.(true);
 
     // If there are remaining items, prepare for next split
     if (bill1Items.length > 0) {
       setBill2Items([]);
       setSplitStep(splitStep + 1);
+      setPaymentCompleted(true);
+      handlePaymentComplete();
     } else {
       // No more items to split, send final data
       handleFinalConfirm([...completedSplits, newSplit]);
+      // Loading state will be handled by parent component after this
     }
-
-    setPaymentCompleted(true);
-    handlePaymentComplete();
   };
 
   if (!isOpen) return null;

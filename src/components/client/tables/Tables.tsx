@@ -1,7 +1,8 @@
 import { Table, Order, OrderItem } from '@/types/table';
 import OrderModal from './modal/OrderModal';
 import OrderDetails from './modal/OrderDetails';
-import SplitBill from './modal/SplitBill';
+import SplitBill, { FinalSplitData, SplitBillState } from './modal/SplitBill';
+import TableHistory from './TableHistory';
 import { motion } from 'framer-motion';
 import {
   FaUsers,
@@ -21,12 +22,12 @@ import SpinningModal from '@/components/UI/SpinningModal';
 import { useUpdateOrderStatus } from '@/hooks/useOrder';
 
 // Extended OrderItem interface
-interface ExtendedOrderItem extends OrderItem {
+export interface ExtendedOrderItem extends OrderItem {
   name: string;
 }
 
 // Extended Table type to include orders
-interface TableWithOrders extends Table {
+export interface TableWithOrders extends Table {
   orders: ExtendedOrder | null;
   room?: string;
 }
@@ -43,36 +44,11 @@ interface TablesByRoom {
   [room: string]: TableWithOrders[];
 }
 
-// Table history record
-interface TableHistoryRecord {
-  id: number;
-  tableId: number;
-  tableNumber: string;
-  room: string;
-  status: string;
-  capacity: number;
-  timestamp: string;
-  action: string;
-  total: string;
-  details: string;
-  orderDetails?: HistoryOrderDetails;
-}
-
-// Interface for order details modal in history
-interface HistoryOrderDetails {
-  id: number;
-  orderItems: ExtendedOrderItem[];
-  total: number;
-  status: string;
-  createdAt: string;
-}
-
 const Tables: React.FC = () => {
   const [tables, setTables] = useState<TableWithOrders[]>([]);
   const [tablesByRoom, setTablesByRoom] = useState<TablesByRoom>({});
   const [selectedTable, setSelectedTable] = useState<TableWithOrders | null>(null);
   const [activeTab, setActiveTab] = useState<'current' | 'history'>('current');
-  const [tableHistory, setTableHistory] = useState<TableHistoryRecord[]>([]);
   // Modal states
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [isPeopleCountModalOpen, setIsPeopleCountModalOpen] = useState(false);
@@ -81,14 +57,11 @@ const Tables: React.FC = () => {
 
   const [peopleCount, setPeopleCount] = useState<number>(1);
   const [tempPeopleCount, setTempPeopleCount] = useState<string>('1');
-  const [splitBillData, setSplitBillData] = useState<any>(null);
-  const [totalBill, setTotalBill] = useState<number>(0);
+  const [_splitBillData, setSplitBillData] = useState<any>(null);
+  const [_totalBill, setTotalBill] = useState<number>(0);
   const { tablesData, tablesLoading, handleUpdateTableStatus } = useTables();
   const { handleUpdateOrderStatus, handleUpdateOrderPayment } = useUpdateOrderStatus();
-  const [selectedHistoryOrder, setSelectedHistoryOrder] = useState<HistoryOrderDetails | null>(
-    null
-  );
-  const [isHistoryOrderDetailsOpen, setIsHistoryOrderDetailsOpen] = useState(false);
+  const [isPaymentLoading, setIsPaymentLoading] = useState(false);
 
   // Format currency to VND with thousands separators
   const formatCurrency = (amount: number) => {
@@ -136,80 +109,8 @@ const Tables: React.FC = () => {
       });
 
       setTablesByRoom(groupedTables);
-
-      // Generate table history data
-      generateTableHistory(mappedTables);
     }
   }, [tablesData]);
-
-  // Generate table history from tables data
-  const generateTableHistory = (tablesData: TableWithOrders[]) => {
-    const history: TableHistoryRecord[] = [];
-
-    // Get today's date range (12am to 12pm)
-    const today = new Date();
-    const startOfDay = new Date(today);
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const endOfDay = new Date(today);
-    endOfDay.setHours(23, 59, 59, 999);
-
-    // Process all orders from tablesData
-    if (tablesData && tablesData.length > 0) {
-      // Get all orders from all tables
-      const allOrders: any[] = [];
-      tablesData.forEach(table => {
-        if (table.bookings && table.bookings.length > 0) {
-          table.bookings.forEach(booking => {
-            if (booking.order && booking.order.status === 'paid') {
-              allOrders.push({
-                ...booking.order,
-                tableId: table.id,
-                tableNumber: table.number,
-                room: table.room || 'Main Area',
-                capacity: table.capacity,
-              });
-            }
-          });
-        }
-      });
-
-      // Filter orders created today
-      allOrders.forEach(order => {
-        // Convert timestamp to Date object
-        const orderDate = new Date(parseInt(order.createdAt));
-
-        // Check if the order was created today (between startOfDay and endOfDay)
-        if (orderDate >= startOfDay && orderDate <= endOfDay) {
-          // Add only the order record for paid orders
-          history.push({
-            id: history.length + 1,
-            tableId: order.tableId,
-            tableNumber: order.tableNumber,
-            room: order.room,
-            status: order.status,
-            capacity: order.capacity,
-            timestamp: order.createdAt,
-            action: 'Order Paid',
-            total: formatCurrency(order.total),
-            details: `Order #${order.id}`,
-            orderDetails: {
-              id: order.id,
-              orderItems: order.orderItems,
-              total: order.total,
-              status: order.status,
-              createdAt: order.createdAt,
-            },
-          });
-        }
-      });
-    }
-
-    // Sort history by timestamp (newest first)
-    history.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-
-    setTableHistory(history);
-  };
 
   const handleTableClick = (table: TableWithOrders) => {
     setSelectedTable(table);
@@ -264,21 +165,6 @@ const Tables: React.FC = () => {
     const parsedValue = parseInt(newValue);
     if (!isNaN(parsedValue)) {
       setPeopleCount(parsedValue);
-    }
-  };
-
-  const handlePaymentConfirm = (paymentData: {
-    paymentMethod: string;
-    amount: number;
-    reference: string;
-  }) => {
-    // Update the order status to 'paid'
-    if (paymentData.amount === selectedTable?.orders?.total) {
-      handleUpdateOrderPayment(selectedTable?.orders?.id || 0, paymentData.paymentMethod);
-      handleUpdateOrderStatus(selectedTable?.orders?.id || 0, 'paid');
-      handleUpdateTableStatus(selectedTable?.id || 0, 'available');
-    } else {
-      console.log('Payment amount is incorrect');
     }
   };
 
@@ -361,39 +247,107 @@ const Tables: React.FC = () => {
     setIsOrderModalOpen(false);
   }
 
-  // Handle click outside modal
-  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Only close if clicking directly on the overlay, not its children
-    if (e.target === e.currentTarget) {
-      if (isOrderModalOpen) {
-        setIsOrderModalOpen(false);
-      } else if (isPeopleCountModalOpen) {
+  // Reset all modal states and temporary data
+  const resetModalStates = () => {
+    setIsOrderModalOpen(false);
+    setIsPeopleCountModalOpen(false);
+    setIsOrderDetailsOpen(false);
+    setIsSplitBillOpen(false);
+    setPeopleCount(1);
+    setTempPeopleCount('1');
+    setSplitBillData(null);
+    setIsPaymentLoading(false);
+  };
+
+  // Handle closing modals with proper state cleanup
+  const handleCloseModal = (modalType: 'order' | 'peopleCount' | 'orderDetails' | 'splitBill') => {
+    switch (modalType) {
+      case 'order':
+        // If order modal is closed, reset all states
+        resetModalStates();
+        break;
+      case 'peopleCount':
+        // Reset people count and close modal
+        setPeopleCount(1);
+        setTempPeopleCount('1');
         setIsPeopleCountModalOpen(false);
-      } else if (isOrderDetailsOpen) {
+        break;
+      case 'orderDetails':
+        // Just close the modal, preserve the order data
         setIsOrderDetailsOpen(false);
-      } else if (isSplitBillOpen) {
+        break;
+      case 'splitBill':
+        // If split bill is cancelled, just close the modal and preserve order data
         setIsSplitBillOpen(false);
-      }
+        setIsPaymentLoading(false);
+        break;
     }
   };
 
-  const handleSplitBill = (splitData: any) => {
-    // Here you can handle the split bill data
-    setIsSplitBillOpen(false);
-    const splitBillData = splitData.splits.map((item: any) => ({
+  // Handle overlay clicks for each modal
+  const handleOverlayClick = (
+    e: React.MouseEvent<HTMLDivElement>,
+    modalType: 'order' | 'peopleCount' | 'orderDetails' | 'splitBill'
+  ) => {
+    if (e.target === e.currentTarget) {
+      handleCloseModal(modalType);
+    }
+  };
+
+  const handleSplitBill = (splitData: FinalSplitData) => {
+    // Process the split bill data first
+    const splitBillData = splitData.splits.map((item: SplitBillState) => ({
       ...item,
       total: item.total,
     }));
     let splitTotal = 0;
-    splitBillData.forEach((item: any) => {
+    const splitReference: string[] = [];
+
+    splitBillData.forEach((item: SplitBillState) => {
       splitTotal += item.total;
+      splitReference.push(`${item.paymentMethod} + ${item.total.toLocaleString('vi-VN')}`);
     });
-    // You can add your logic here to update the order or handle the payment
+
+    // Set loading state before closing modal
+    setIsPaymentLoading(true);
+
+    // Close the split bill modal
+    setIsSplitBillOpen(false);
+
+    // Process payment
+    handlePaymentConfirm({
+      paymentMethod: 'Split Bill',
+      amount: splitTotal,
+      reference: splitReference.join(', '),
+    });
   };
 
-  const handleHistoryOrderClick = (orderDetails: HistoryOrderDetails) => {
-    setSelectedHistoryOrder(orderDetails);
-    setIsHistoryOrderDetailsOpen(true);
+  const handlePaymentConfirm = async (paymentData: {
+    paymentMethod: string;
+    amount: number;
+    reference: string;
+  }) => {
+    try {
+      // Update the order status to 'paid'
+      if (paymentData.amount === selectedTable?.orders?.total) {
+        await handleUpdateOrderPayment(
+          selectedTable?.orders?.id || 0,
+          paymentData.paymentMethod,
+          paymentData.reference
+        );
+        await handleUpdateOrderStatus(selectedTable?.orders?.id || 0, 'paid');
+        await handleUpdateTableStatus(selectedTable?.id || 0, 'available');
+      } else {
+        console.log('Payment amount is incorrect');
+      }
+    } catch (error) {
+      console.error('Payment processing error:', error);
+    } finally {
+      // Add a small delay before hiding the spinner to ensure it's visible
+      setTimeout(() => {
+        setIsPaymentLoading(false);
+      }, 500);
+    }
   };
 
   return (
@@ -402,6 +356,13 @@ const Tables: React.FC = () => {
       <SpinningModal
         isOpen={tablesLoading}
         message="Loading tables..."
+        size="medium"
+        color="blue"
+      />
+
+      <SpinningModal
+        isOpen={isPaymentLoading}
+        message="Processing payment..."
         size="medium"
         color="blue"
       />
@@ -531,77 +492,7 @@ const Tables: React.FC = () => {
             ))}
           </>
         ) : (
-          <div className="bg-white rounded-xl shadow-md overflow-hidden">
-            <div className="p-4 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-800">Paid Orders History for Today</h2>
-              <p className="text-gray-600">
-                {new Date().toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
-              </p>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Table
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Room
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Order
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Total
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {tableHistory.length > 0 ? (
-                    tableHistory.map(record => (
-                      <tr
-                        key={record.id}
-                        className="hover:bg-gray-50 cursor-pointer"
-                        onClick={() =>
-                          record.orderDetails && handleHistoryOrderClick(record.orderDetails)
-                        }
-                      >
-                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {record.tableNumber}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                          {record.room}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                          <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                            {record.status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-500">{record.details}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {record.total}
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={5} className="px-4 py-6 text-center text-gray-500">
-                        No paid orders for today
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <TableHistory tablesData={tables} />
         )}
 
         {/* People Count Modal */}
@@ -610,23 +501,21 @@ const Tables: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-gray-800/80 flex items-center justify-center z-50 p-4"
-            onClick={handleOverlayClick}
+            className="fixed inset-0 bg-gray-800/80 flex items-center justify-center z-50 p-2 sm:p-4"
+            onClick={e => handleOverlayClick(e, 'peopleCount')}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-2xl w-full max-w-[450px] shadow-2xl overflow-hidden"
+              className="bg-white rounded-2xl w-full max-w-[450px] shadow-2xl flex flex-col max-h-[90vh]"
+              onClick={e => e.stopPropagation()}
             >
-              {/* Header */}
-              <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+              {/* Fixed Header */}
+              <div className="flex-none bg-gray-50 p-2 border-b border-gray-200 rounded-t-2xl">
                 <div className="flex items-center">
                   <button
-                    onClick={e => {
-                      e.stopPropagation();
-                      setIsPeopleCountModalOpen(false);
-                    }}
+                    onClick={() => handleCloseModal('peopleCount')}
                     className="mr-3 p-2 rounded-full hover:bg-gray-200 transition-colors"
                   >
                     <FaArrowLeft className="text-gray-600 text-lg" />
@@ -635,19 +524,23 @@ const Tables: React.FC = () => {
                 </div>
               </div>
 
-              {/* Content */}
-              <div className="p-6">
-                {/* Display */}
-                <div className="bg-white border-2 border-blue-100 rounded-xl p-6 mb-8 text-center">
-                  <div className="text-5xl font-bold text-blue-600 mb-2">{peopleCount}</div>
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+                {/* Display - Fixed at Top of Content */}
+                <div className="bg-white border-2 border-blue-100 rounded-xl p-4 sm:p-6 mb-6 sm:mb-8 text-center">
+                  <div className="text-4xl sm:text-5xl font-bold text-blue-600 mb-2">
+                    {peopleCount}
+                  </div>
                   <div className="flex items-center justify-center gap-2 text-gray-500">
                     <FaUsers className="text-blue-400" />
-                    <p className="text-sm">Maximum capacity: {selectedTable.capacity} people</p>
+                    <p className="text-sm sm:text-base">
+                      Maximum capacity: {selectedTable.capacity} people
+                    </p>
                   </div>
                 </div>
 
-                {/* Number Pad */}
-                <div className="grid grid-cols-3 gap-3 mb-6">
+                {/* Number Pad - Scrollable */}
+                <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4 sm:mb-6 max-w-[400px] mx-auto cursor-pointer">
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
                     <button
                       key={num}
@@ -655,9 +548,16 @@ const Tables: React.FC = () => {
                         e.stopPropagation();
                         handleNumberClick(num);
                       }}
-                      className="aspect-square flex items-center justify-center bg-white border-2 border-gray-200 
-                               hover:border-blue-400 hover:bg-blue-50 text-2xl font-semibold text-gray-700 
-                               rounded-xl transition-all duration-200 active:scale-95"
+                      className="
+                        aspect-square flex items-center justify-center bg-white 
+                        border-2 border-gray-200 text-xl sm:text-2xl font-semibold text-gray-700 
+                        rounded-xl transition-all duration-200 
+                        hover:border-blue-400 hover:bg-blue-50 
+                        active:scale-95 touch-manipulation
+                        min-h-[3rem] sm:min-h-[4rem]
+                        shadow-sm hover:shadow-md
+                        cursor-pointer
+                      "
                     >
                       {num}
                     </button>
@@ -667,9 +567,16 @@ const Tables: React.FC = () => {
                       e.stopPropagation();
                       handleClearNumber();
                     }}
-                    className="aspect-square flex items-center justify-center bg-white border-2 border-red-200 
-                             hover:border-red-400 hover:bg-red-50 text-lg font-medium text-red-600 
-                             rounded-xl transition-all duration-200 active:scale-95"
+                    className="
+                      aspect-square flex items-center justify-center bg-white 
+                      border-2 border-red-200 text-sm sm:text-base font-medium text-red-600 
+                      rounded-xl transition-all duration-200 
+                      hover:border-red-400 hover:bg-red-50 
+                      active:scale-95 touch-manipulation
+                      min-h-[3rem] sm:min-h-[4rem]
+                      shadow-sm hover:shadow-md
+                      cursor-pointer
+                    "
                   >
                     Clear
                   </button>
@@ -678,9 +585,16 @@ const Tables: React.FC = () => {
                       e.stopPropagation();
                       handleNumberClick(0);
                     }}
-                    className="aspect-square flex items-center justify-center bg-white border-2 border-gray-200 
-                             hover:border-blue-400 hover:bg-blue-50 text-2xl font-semibold text-gray-700 
-                             rounded-xl transition-all duration-200 active:scale-95"
+                    className="
+                      aspect-square flex items-center justify-center bg-white 
+                      border-2 border-gray-200 text-xl sm:text-2xl font-semibold text-gray-700 
+                      rounded-xl transition-all duration-200 
+                      hover:border-blue-400 hover:bg-blue-50 
+                      active:scale-95 touch-manipulation
+                      min-h-[3rem] sm:min-h-[4rem]
+                      shadow-sm hover:shadow-md
+                      cursor-pointer
+                    "
                   >
                     0
                   </button>
@@ -689,30 +603,55 @@ const Tables: React.FC = () => {
                       e.stopPropagation();
                       handleBackspace();
                     }}
-                    className="aspect-square flex items-center justify-center bg-white border-2 border-gray-200 
-                             hover:border-gray-400 hover:bg-gray-50 text-lg font-medium text-gray-600 
-                             rounded-xl transition-all duration-200 active:scale-95"
+                    className="
+                      aspect-square flex items-center justify-center bg-white 
+                      border-2 border-gray-200 text-lg sm:text-xl font-medium text-gray-600
+                      rounded-xl transition-all duration-200 
+                      hover:border-gray-400 hover:bg-gray-50 
+                      active:scale-95 touch-manipulation
+                      min-h-[3rem] sm:min-h-[4rem]
+                      shadow-sm hover:shadow-md
+                      cursor-pointer
+                    "
                   >
-                    ←
+                    <FaArrowLeft />
                   </button>
                 </div>
+              </div>
 
-                {/* Action Buttons */}
-                <div className="flex gap-3">
+              {/* Fixed Action Buttons */}
+              <div className="flex-none p-4 border-t border-gray-200">
+                <div className="flex gap-2 sm:gap-3 max-w-[400px] mx-auto">
                   <button
                     onClick={e => {
                       e.stopPropagation();
                       setIsPeopleCountModalOpen(false);
                     }}
-                    className="flex-1 py-3.5 px-4 border-2 border-gray-200 text-gray-700 font-medium 
-                             rounded-xl hover:bg-gray-50 transition-colors"
+                    className="
+                      flex-1 py-3 sm:py-4 px-3 sm:px-6
+                      border-2 border-gray-200 text-gray-700 
+                      font-medium text-sm sm:text-base
+                      rounded-xl transition-all duration-200
+                      hover:bg-gray-50 active:scale-98
+                      shadow-sm hover:shadow-md
+                      cursor-pointer
+                      touch-manipulation
+                    "
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handlePeopleCountSubmit}
-                    className="flex-1 py-3.5 px-4 bg-blue-600 text-white font-medium 
-                             rounded-xl hover:bg-blue-700 transition-colors"
+                    className="
+                      flex-1 py-3 sm:py-4 px-3 sm:px-6
+                      bg-blue-600 text-white font-medium 
+                      text-sm sm:text-base rounded-xl 
+                      transition-all duration-200
+                      hover:bg-blue-700 active:scale-98
+                      shadow-sm hover:shadow-md
+                      cursor-pointer
+                      touch-manipulation
+                    "
                   >
                     Continue
                   </button>
@@ -726,11 +665,11 @@ const Tables: React.FC = () => {
         {isOrderModalOpen && selectedTable && (
           <div
             className="fixed inset-0 bg-gray-800/80 flex items-center justify-center z-50 p-4"
-            onClick={handleOverlayClick}
+            onClick={e => handleOverlayClick(e, 'order')}
           >
             <OrderModal
               isOpen={isOrderModalOpen}
-              onClose={() => setIsOrderModalOpen(false)}
+              onClose={() => handleCloseModal('order')}
               onSave={order => handleAddOrder(selectedTable.id, order as ExtendedOrder)}
               tableId={selectedTable.id}
               peopleCount={peopleCount}
@@ -742,11 +681,11 @@ const Tables: React.FC = () => {
         {isOrderDetailsOpen && selectedTable && selectedTable.orders && (
           <div
             className="fixed inset-0 bg-gray-800/80 flex items-center justify-center z-50 p-4"
-            onClick={handleOverlayClick}
+            onClick={e => handleOverlayClick(e, 'orderDetails')}
           >
             <OrderDetails
               order={selectedTable.orders}
-              onClose={() => setIsOrderDetailsOpen(false)}
+              onClose={() => handleCloseModal('orderDetails')}
               onSplitBill={() => {
                 setIsOrderDetailsOpen(false);
                 setIsSplitBillOpen(true);
@@ -759,75 +698,12 @@ const Tables: React.FC = () => {
         {/* Split Bill Modal */}
         {isSplitBillOpen && selectedTable && selectedTable.orders && (
           <SplitBill
+            setIsLoading={setIsPaymentLoading}
             isOpen={isSplitBillOpen}
-            onClose={() => setIsSplitBillOpen(false)}
+            onClose={() => handleCloseModal('splitBill')}
             order={selectedTable.orders}
             onConfirm={handleSplitBill}
           />
-        )}
-
-        {/* History Order Details Modal */}
-        {isHistoryOrderDetailsOpen && selectedHistoryOrder && (
-          <div
-            className="fixed inset-0 bg-gray-800/80 flex items-center justify-center z-50 p-4"
-            onClick={() => setIsHistoryOrderDetailsOpen(false)}
-          >
-            <div
-              className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="p-6 border-b border-gray-200">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-xl font-semibold text-gray-800">
-                    Order Details #{selectedHistoryOrder.id}
-                  </h2>
-                  <button
-                    onClick={() => setIsHistoryOrderDetailsOpen(false)}
-                    className="text-gray-400 hover:text-gray-500"
-                  >
-                    <span className="sr-only">Close</span>
-                    <FaArrowLeft className="h-6 w-6" />
-                  </button>
-                </div>
-              </div>
-              <div className="p-6">
-                <div className="space-y-4">
-                  <div className="flex justify-between text-sm text-gray-500">
-                    <span>Status</span>
-                    <span className="font-medium text-green-600">
-                      {selectedHistoryOrder.status}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm text-gray-500">
-                    <span>Date</span>
-                    <span>{formatDate(selectedHistoryOrder.createdAt)}</span>
-                  </div>
-                  <div className="border-t border-gray-200 pt-4">
-                    <h3 className="font-medium text-gray-900 mb-4">Order Items</h3>
-                    <div className="space-y-3">
-                      {selectedHistoryOrder.orderItems.map((item, index) => (
-                        <div key={index} className="flex justify-between items-center">
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">{item.name}</p>
-                            <p className="text-sm text-gray-500">Quantity: {item.quantity}</p>
-                          </div>
-                          <p className="text-sm font-medium text-gray-900">
-                            {formatCurrency(item.price * item.quantity)}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="border-t border-gray-200 pt-4">
-                    <div className="flex justify-between items-center text-lg font-medium text-gray-900">
-                      <span>Total</span>
-                      <span>{formatCurrency(selectedHistoryOrder.total)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         )}
       </div>
     </div>

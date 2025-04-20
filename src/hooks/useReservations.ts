@@ -12,6 +12,7 @@ export const useReservations = () => {
     data: bookings,
     loading: bookingLoading,
     error: bookingError,
+    refetch,
   } = useQuery(GET_ALL_BOOKINGS);
   const [createBooking, { loading: mutationLoading, error: mutationError }] =
     useMutation(CREATE_BOOKING);
@@ -59,16 +60,17 @@ export const useReservations = () => {
   };
 
   // Display LoadingModal when data is being processed
-  if (loading || mutationLoading) {
-    return {
-      reservations: [],
-      tables: [],
-      loading: true,
-      error: null,
-      handleSubmit,
-      isLoading: true,
-    };
-  }
+  // if (loading || mutationLoading) {
+  //   return {
+  //     reservations: [],
+  //     tables: [],
+  //     loading: true,
+  //     error: null,
+  //     handleSubmit,
+  //     isLoading: true,
+  //     refetch,
+  //   };
+  // }
 
   return {
     reservations,
@@ -77,5 +79,6 @@ export const useReservations = () => {
     error,
     handleSubmit,
     isLoading: false,
+    refetch,
   };
 };

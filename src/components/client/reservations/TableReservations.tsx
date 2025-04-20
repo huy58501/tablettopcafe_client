@@ -4,7 +4,6 @@ import ReservationList from './ReservationList';
 import ReservationCalendar from './ReservationCalendar';
 import ReservationForm from './modal/ReservationForm';
 import ReservationModal from './modal/ReservationModal';
-import LoadingModal from '@/components/UI/LoadingModal';
 import { Booking, ReservationStatus, Table } from '../../../types/reservation';
 import {
   FaList,
@@ -16,6 +15,7 @@ import {
   FaCalendarWeek,
   FaCalendar,
 } from 'react-icons/fa';
+import SpinningModal from '@/components/UI/SpinningModal';
 
 // Custom button component for consistent styling
 interface ButtonProps {
@@ -83,13 +83,8 @@ export default function TableReservations() {
     error,
     handleSubmit: submitReservation,
     isLoading,
+    refetch,
   } = useReservations();
-
-  // Get table for selected reservation
-  const getSelectedTable = (): Table | undefined => {
-    if (!selectedReservation) return undefined;
-    return tables.find(table => table.id === selectedReservation.tableId);
-  };
 
   // Handle reservation edit
   const handleEdit = (reservation: Booking) => {
@@ -125,7 +120,11 @@ export default function TableReservations() {
   const handleSubmit = async (data: Omit<Booking, 'id' | 'createdAt' | 'updatedAt'>) => {
     setIsSubmitting(true);
     try {
+      setShowForm(false);
       await submitReservation(data as Booking);
+      // Refresh the reservations data after successful booking
+      await refetch();
+      setIsSubmitting(false);
       // The form will handle closing itself after showing success message
     } catch (error) {
       console.error('Error submitting reservation:', error);
@@ -133,13 +132,10 @@ export default function TableReservations() {
     }
   };
 
-  // Display LoadingModal when data is being processed
-  if (isLoading) {
-    return <LoadingModal />;
-  }
-
   return (
     <div className="min-h-screen bg-gray-50">
+      <SpinningModal isOpen={isLoading} message="Loading reservations..." />
+      <SpinningModal isOpen={isSubmitting} message="Submitting reservation..." />
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">

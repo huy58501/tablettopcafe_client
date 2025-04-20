@@ -2,7 +2,7 @@
 
 import { use } from 'react';
 import TableReservations from '@/components/client/reservations/TableReservations';
-import NotFound from '@/components/UI/NotFound';
+import NotFound from '@/components/layout/NotFound';
 import LoadingModal from '@/components/UI/LoadingModal';
 import useAuth from '@/hooks/useAuth';
 import Reports from '@/components/admin/reports/Reports';
