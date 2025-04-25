@@ -31,13 +31,6 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onClose, onSplitBill
   const [paymentReference, setPaymentReference] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Handle click outside modal
-  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
   // Format currency to VND with thousands separators
   const formatCurrency = (amount: number) => {
     return `VND: ${amount.toLocaleString('vi-VN')}`;
@@ -59,7 +52,9 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onClose, onSplitBill
     amount: number;
     reference: string;
   }) => {
-    setIsProcessing(true);
+    setTimeout(() => {
+      setIsProcessing(true);
+    }, 1000);
     try {
       await onConfirm({
         paymentMethod: paymentData.paymentMethod,

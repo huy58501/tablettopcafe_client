@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import LoadingModal from '../UI/LoadingModal';
+import { GetServerSideProps } from 'next';
 
 export const Login = () => {
   const [username, setUsername] = useState('');
@@ -40,7 +41,6 @@ export const Login = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('Login error:', errorData);
         setError(errorData.error || 'An error occurred during login.');
         return;
       }
@@ -57,7 +57,6 @@ export const Login = () => {
         setError(data.error || 'Invalid login.');
       }
     } catch (err) {
-      console.error('Login exception:', err);
       setError('Network error, please try again later.');
     } finally {
       setLoading(false);

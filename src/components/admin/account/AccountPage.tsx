@@ -392,7 +392,9 @@ const AccountPage: React.FC = () => {
                         <p>
                           Last Login:{' '}
                           {user.loginHistory && user.loginHistory.length > 0
-                            ? new Date(user.loginHistory[0].login_time).toLocaleString()
+                            ? new Date(
+                                user.loginHistory[user.loginHistory.length - 2].login_time
+                              ).toLocaleString()
                             : 'N/A'}
                         </p>
                       </div>
@@ -408,38 +410,44 @@ const AccountPage: React.FC = () => {
                           </div>
                           <div className="max-h-[300px] overflow-y-auto">
                             <div className="p-4 space-y-3">
-                              {user.loginHistory.map(
-                                (
-                                  login: { login_time: string; ip: string; device: string },
-                                  index: number
-                                ) => (
-                                  <div
-                                    key={index}
-                                    className="bg-white rounded-lg p-3 border border-gray-200 hover:border-gray-300 transition-colors duration-150"
-                                  >
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                      <div>
-                                        <p className="text-xs text-gray-500">Login Time</p>
-                                        <p className="text-sm font-medium text-gray-900">
-                                          {new Date(login.login_time).toLocaleString()}
-                                        </p>
-                                      </div>
-                                      <div>
-                                        <p className="text-xs text-gray-500">IP Address</p>
-                                        <p className="text-sm font-medium text-gray-900">
-                                          {login.ip}
-                                        </p>
-                                      </div>
-                                      <div>
-                                        <p className="text-xs text-gray-500">Device</p>
-                                        <p className="text-sm font-medium text-gray-900 truncate">
-                                          {login.device}
-                                        </p>
+                              {[...user.loginHistory]
+                                .sort(
+                                  (a, b) =>
+                                    new Date(b.login_time).getTime() -
+                                    new Date(a.login_time).getTime()
+                                )
+                                .map(
+                                  (
+                                    login: { login_time: string; ip: string; device: string },
+                                    index: number
+                                  ) => (
+                                    <div
+                                      key={index}
+                                      className="bg-white rounded-lg p-3 border border-gray-200 hover:border-gray-300 transition-colors duration-150"
+                                    >
+                                      <div className="grid grid-cols-1 gap-3">
+                                        <div>
+                                          <p className="text-xs text-gray-500">Login Time</p>
+                                          <p className="text-sm font-medium text-gray-900 mt-1">
+                                            {new Date(login.login_time).toLocaleString()}
+                                          </p>
+                                        </div>
+                                        <div>
+                                          <p className="text-xs text-gray-500">IP Address</p>
+                                          <p className="text-sm font-medium text-gray-900 mt-1">
+                                            {login.ip}
+                                          </p>
+                                        </div>
+                                        <div>
+                                          <p className="text-xs text-gray-500">Device</p>
+                                          <p className="text-sm font-medium text-gray-900 mt-1 whitespace-pre-line">
+                                            {login.device}
+                                          </p>
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
-                                )
-                              )}
+                                  )
+                                )}
                             </div>
                           </div>
                         </div>

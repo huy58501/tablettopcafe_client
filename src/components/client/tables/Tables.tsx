@@ -327,6 +327,7 @@ const Tables: React.FC = () => {
     amount: number;
     reference: string;
   }) => {
+    setIsPaymentLoading(true);
     try {
       // Update the order status to 'paid'
       if (paymentData.amount === selectedTable?.orders?.total) {
@@ -343,10 +344,7 @@ const Tables: React.FC = () => {
     } catch (error) {
       console.error('Payment processing error:', error);
     } finally {
-      // Add a small delay before hiding the spinner to ensure it's visible
-      setTimeout(() => {
-        setIsPaymentLoading(false);
-      }, 500);
+      setIsPaymentLoading(false);
     }
   };
 
@@ -396,8 +394,8 @@ const Tables: React.FC = () => {
               onClick={() => setActiveTab('current')}
               className={`flex items-center py-4 px-4 border-b-2 font-medium text-sm ${
                 activeTab === 'current'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'border-blue-500 text-blue-600 cursor-pointer'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 cursor-pointer'
               }`}
             >
               <FaTable className="mr-2" />
@@ -407,8 +405,8 @@ const Tables: React.FC = () => {
               onClick={() => setActiveTab('history')}
               className={`flex items-center py-4 px-4 border-b-2 font-medium text-sm ${
                 activeTab === 'history'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'border-blue-500 text-blue-600 cursor-pointer'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 cursor-pointer'
               }`}
             >
               <FaHistory className="mr-2" />

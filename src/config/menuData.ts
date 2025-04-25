@@ -20,7 +20,7 @@ export const menuItemsAdmin = (username: string) => [
     href: `/${username}/kitchen`,
   },
   {
-    label: 'Quản Lý Shifts',
+    label: 'Quản Lý Ca Làm Việc',
     href: `/${username}/shifts`,
   },
   {
@@ -43,7 +43,7 @@ export const menuItemsClient = (username: string) => [
     href: `/${username}/kitchen`,
   },
   {
-    label: 'Quản Lý Shifts',
+    label: 'Quản Lý Ca Làm Việc',
     href: `/${username}/shifts`,
   },
   {
@@ -70,7 +70,7 @@ export const menuItemsAdminClientView = (username: string) => [
     href: `/${username}/kitchen`,
   },
   {
-    label: 'Quản Lý Shifts',
+    label: 'Quản Lý Ca Làm Việc',
     href: `/${username}/shifts`,
   },
   {
