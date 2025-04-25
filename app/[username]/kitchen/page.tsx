@@ -2,6 +2,6 @@
 
 import KitchenPage from '@/components/client/kitchen/kitchen';
 
-export default function TablesPage() {
+export default function KitchenPages() {
   return <KitchenPage />;
 }

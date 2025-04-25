@@ -13,7 +13,7 @@ export default async function Layout({
   params,
 }: {
   children: React.ReactNode;
-  params: { username: string };
+  params: Promise<{ username: string }>;
 }) {
   const { username } = await params;
   const auth = await checkAuthSSR(username);
