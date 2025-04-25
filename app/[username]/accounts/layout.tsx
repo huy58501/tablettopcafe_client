@@ -16,7 +16,7 @@ export default async function Layout(props: LayoutProps) {
   // Handle both Promise and direct object cases
   const params = await Promise.resolve(props.params);
   const { username } = params;
-  
+
   const auth = await checkAuthSSR(username);
 
   if (!auth || auth.role !== 'admin') {
