@@ -14,7 +14,7 @@ export default async function Layout({
   children: React.ReactNode;
   params: { username: string };
 }) {
-  const { username } = await params;
+  const { username } = params;
   const auth = await checkAuthSSR(username);
 
   if (!auth || auth.role !== 'admin') {
