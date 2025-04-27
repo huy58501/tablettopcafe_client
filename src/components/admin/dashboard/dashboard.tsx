@@ -23,7 +23,6 @@ import {
   Line,
 } from 'recharts';
 import { format } from 'date-fns';
-import { UserIcon, CurrencyDollarIcon, CalendarIcon, ClockIcon } from '@heroicons/react/24/outline';
 
 interface ClockIn {
   id: string;
@@ -147,10 +146,11 @@ const Dashboard = () => {
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
   return (
-    <div className="p-4 bg-gray-50 min-h-screen">
+    <div className="bg-gray-50 min-h-screen px-2 sm:px-4">
       <SpinningModal isOpen={isLoading} message="Loading dashboard data..." />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      {/* Metrics Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
@@ -158,9 +158,6 @@ const Dashboard = () => {
               <p className="text-2xl font-bold text-blue-600 mt-1">
                 {formatAmount(metrics.totalRevenue)}
               </p>
-            </div>
-            <div className="p-3 bg-blue-100 rounded-full">
-              <CurrencyDollarIcon className="w-6 h-6 text-blue-600" />
             </div>
           </div>
         </div>
@@ -171,9 +168,6 @@ const Dashboard = () => {
               <p className="text-sm font-medium text-gray-500">Total Orders</p>
               <p className="text-2xl font-bold text-green-600 mt-1">{metrics.totalOrders}</p>
             </div>
-            <div className="p-3 bg-green-100 rounded-full">
-              <CalendarIcon className="w-6 h-6 text-green-600" />
-            </div>
           </div>
         </div>
 
@@ -183,9 +177,6 @@ const Dashboard = () => {
               <p className="text-sm font-medium text-gray-500">Total Bookings</p>
               <p className="text-2xl font-bold text-purple-600 mt-1">{metrics.totalBookings}</p>
             </div>
-            <div className="p-3 bg-purple-100 rounded-full">
-              <UserIcon className="w-6 h-6 text-purple-600" />
-            </div>
           </div>
         </div>
 
@@ -194,9 +185,6 @@ const Dashboard = () => {
             <div>
               <p className="text-sm font-medium text-gray-500">Active Clock-ins</p>
               <p className="text-2xl font-bold text-orange-600 mt-1">{metrics.activeClockIns}</p>
-            </div>
-            <div className="p-3 bg-orange-100 rounded-full">
-              <ClockIcon className="w-6 h-6 text-orange-600" />
             </div>
           </div>
         </div>

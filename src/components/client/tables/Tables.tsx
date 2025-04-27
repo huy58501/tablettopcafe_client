@@ -20,6 +20,7 @@ import { useState, useEffect } from 'react';
 import { useTables } from '@/hooks/useTable';
 import SpinningModal from '@/components/UI/SpinningModal';
 import { useUpdateOrderStatus } from '@/hooks/useOrder';
+import { useReservations } from '@/hooks/useReservations';
 
 // Extended OrderItem interface
 export interface ExtendedOrderItem extends OrderItem {
@@ -59,32 +60,31 @@ const Tables: React.FC = () => {
   const [tempPeopleCount, setTempPeopleCount] = useState<string>('1');
   const [_splitBillData, setSplitBillData] = useState<any>(null);
   const [_totalBill, setTotalBill] = useState<number>(0);
-  const { tablesData, tablesLoading, handleUpdateTableStatus } = useTables();
+  const { tablesData, tablesLoading, handleUpdateTableStatus, handleUpdateBookingTableChange } =
+    useTables();
   const { handleUpdateOrderStatus, handleUpdateOrderPayment } = useUpdateOrderStatus();
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
-
+  const { handleUpdateStatus } = useReservations();
+  const [isTableChangeLoading, setIsTableChangeLoading] = useState(false);
   // Format currency to VND with thousands separators
   const formatCurrency = (amount: number) => {
     return `${amount.toLocaleString('vi-VN')}`;
   };
 
-  // Format date to readable format
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString();
-  };
-
   useEffect(() => {
     if (tablesData) {
-      const mappedTables = tablesData.allTable.map((table: Table) => ({
-        ...table,
-        orders:
-          table.status === 'occupied' &&
-          table.bookings?.length > 0 &&
-          table.bookings[table.bookings.length - 1]?.order
-            ? table.bookings[table.bookings.length - 1].order
-            : null,
-      }));
+      const mappedTables = tablesData.allTable
+        .map((table: Table) => ({
+          ...table,
+          orders:
+            table.status === 'occupied' &&
+            table.bookings?.length > 0 &&
+            table.bookings[table.bookings.length - 1]?.order
+              ? table.bookings[table.bookings.length - 1].order
+              : null,
+        }))
+        .sort((a: TableWithOrders, b: TableWithOrders) => a.id - b.id); // Sort all tables by ID
+
       setTables(mappedTables);
       setTotalBill(
         mappedTables.reduce(
@@ -93,7 +93,7 @@ const Tables: React.FC = () => {
         )
       );
 
-      // Group tables by room and sort by ID
+      // Group tables by room but maintain ID order
       const groupedTables: TablesByRoom = {};
       mappedTables.forEach((table: TableWithOrders) => {
         const room = table.room || 'Main Area';
@@ -103,14 +103,17 @@ const Tables: React.FC = () => {
         groupedTables[room].push(table);
       });
 
-      // Sort tables by ID within each room
-      Object.keys(groupedTables).forEach(room => {
-        groupedTables[room].sort((a, b) => a.id - b.id);
-      });
-
       setTablesByRoom(groupedTables);
     }
   }, [tablesData]);
+
+  useEffect(() => {
+    if (selectedTable) {
+      console.log('selectedTable', selectedTable);
+      console.log('selectedTable booking id', selectedTable?.bookings[0]?.id);
+    }
+    console.log('tables', tables);
+  }, [selectedTable, tables]);
 
   const handleTableClick = (table: TableWithOrders) => {
     setSelectedTable(table);
@@ -338,6 +341,10 @@ const Tables: React.FC = () => {
         );
         await handleUpdateOrderStatus(selectedTable?.orders?.id || 0, 'paid');
         await handleUpdateTableStatus(selectedTable?.id || 0, 'available');
+        await handleUpdateStatus(
+          selectedTable?.bookings[selectedTable?.bookings.length - 1]?.id.toString() || '0',
+          'Confirmed'
+        );
       } else {
         console.log('Payment amount is incorrect');
       }
@@ -348,8 +355,23 @@ const Tables: React.FC = () => {
     }
   };
 
+  const handleTableChange = async (newTableId: number): Promise<void> => {
+    setIsTableChangeLoading(true);
+    const bookingId = selectedTable?.bookings[selectedTable?.bookings.length - 1]?.id;
+    const currentTableId = selectedTable?.id;
+    try {
+      await handleUpdateBookingTableChange(bookingId || 0, newTableId);
+      await handleUpdateTableStatus(currentTableId || 0, 'available');
+      await handleUpdateTableStatus(newTableId, 'occupied');
+    } catch (error) {
+      console.error('Error updating booking table change:', error);
+    } finally {
+      setIsTableChangeLoading(false);
+    }
+  };
+
   return (
-    <div className="p-4 md:p-6 bg-gray-50 min-h-screen">
+    <div className="p-4 md:p-6 bg-gray-50 min-h-screen pt-[60px]">
       {/* Loading Spinner */}
       <SpinningModal
         isOpen={tablesLoading}
@@ -361,6 +383,13 @@ const Tables: React.FC = () => {
       <SpinningModal
         isOpen={isPaymentLoading}
         message="Processing payment..."
+        size="medium"
+        color="blue"
+      />
+
+      <SpinningModal
+        isOpen={isTableChangeLoading}
+        message="Changing table..."
         size="medium"
         color="blue"
       />
@@ -689,6 +718,7 @@ const Tables: React.FC = () => {
                 setIsSplitBillOpen(true);
               }}
               onConfirm={handlePaymentConfirm}
+              onTableChange={handleTableChange}
             />
           </div>
         )}

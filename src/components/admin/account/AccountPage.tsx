@@ -218,12 +218,13 @@ const AccountPage: React.FC = () => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold text-gray-900">User Summary</h2>
+            {/* Add Dish Floating Button */}
             <button
+              className="fixed bottom-6 right-6 z-40 bg-blue-600 text-white rounded-full p-4 shadow-lg hover:bg-blue-700 transition cursor-pointer"
               onClick={() => setShowAddModal(true)}
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-150 cursor-pointer"
+              aria-label="Add Dish"
             >
-              <FiPlus className="w-4 h-4 mr-1 cursor-pointer" />
-              Add User
+              <FiPlus className="w-6 h-6" />
             </button>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -432,12 +433,15 @@ const AccountPage: React.FC = () => {
                                             {new Date(login.login_time).toLocaleString()}
                                           </p>
                                         </div>
-                                        <div>
-                                          <p className="text-xs text-gray-500">IP Address</p>
-                                          <p className="text-sm font-medium text-gray-900 mt-1">
-                                            {login.ip}
-                                          </p>
-                                        </div>
+                                        {!login.ip.includes('Localhost Testing IP') &&
+                                          !login.ip.includes('localhost') && (
+                                            <div>
+                                              <p className="text-xs text-gray-500">IP Address</p>
+                                              <p className="text-sm font-medium text-gray-900 mt-1">
+                                                {login.ip}
+                                              </p>
+                                            </div>
+                                          )}
                                         <div>
                                           <p className="text-xs text-gray-500">Device</p>
                                           <p className="text-sm font-medium text-gray-900 mt-1 whitespace-pre-line">

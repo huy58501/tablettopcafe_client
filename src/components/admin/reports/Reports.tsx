@@ -140,7 +140,7 @@ const Reports = () => {
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
   return (
-    <div className="p-4 bg-gray-50 min-h-screen">
+    <div className="p-4 bg-gray-50 min-h-screen pt-[70px]">
       <div className="mb-6 flex space-x-4">
         <div className="flex-1">
           <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
@@ -162,7 +162,7 @@ const Reports = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <h3 className="text-sm font-medium text-gray-500 mb-1">Total Revenue</h3>
           <p className="text-2xl font-bold text-blue-600">{formatAmount(analytics.totalRevenue)}</p>

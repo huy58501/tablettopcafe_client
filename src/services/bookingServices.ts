@@ -16,6 +16,7 @@ export const GET_ALL_BOOKINGS = gql`
       customerEmail
       customerNote
       status
+      tableId
     }
   }
 `;
@@ -80,6 +81,34 @@ export const UPDATE_BOOKING = gql`
       bookingType: $bookingType
       status: $status
     ) {
+      id
+      table {
+        number
+      }
+    }
+  }
+`;
+
+export const UPDATE_BOOKING_STATUS = gql`
+  mutation UpdateBookingStatus($id: Int!, $status: String!) {
+    updateBookingStatus(id: $id, status: $status) {
+      id
+      status
+    }
+  }
+`;
+
+export const DELETE_BOOKING = gql`
+  mutation DeleteBooking($id: Int!) {
+    deleteBooking(id: $id) {
+      id
+    }
+  }
+`;
+
+export const UPDATE_BOOKING_TABLE_CHANGE = gql`
+  mutation UpdateBookingTableChange($id: Int!, $tableId: Int!) {
+    updateBookingTableChange(id: $id, tableId: $tableId) {
       id
       table {
         number

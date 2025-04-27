@@ -8,22 +8,30 @@ interface ReservationFormProps {
   onSubmit: (data: Omit<Booking, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   onCancel: () => void;
   isSubmitting: boolean;
+  initialData?: Partial<Booking>;
 }
 
-const ReservationForm: React.FC<ReservationFormProps> = ({ onSubmit, onCancel, isSubmitting }) => {
+const ReservationForm: React.FC<ReservationFormProps> = ({
+  onSubmit,
+  onCancel,
+  isSubmitting,
+  initialData,
+}) => {
   const [step, setStep] = useState<1 | 2>(1);
-  const [formData, setFormData] = useState<Partial<Booking>>({
-    customerName: '',
-    phoneNumber: '',
-    customerEmail: '',
-    customerNote: '',
-    reservationDate: new Date().toISOString().split('T')[0],
-    durationSlots: 6,
-    peopleCount: 1,
-    startSlotId: 0,
-    tableId: 0,
-    bookingType: 'online',
-  });
+  const [formData, setFormData] = useState<Partial<Booking> & { startTime?: string }>(
+    initialData || {
+      customerName: '',
+      phoneNumber: '',
+      customerEmail: '',
+      customerNote: '',
+      reservationDate: new Date().toISOString().split('T')[0],
+      durationSlots: 6,
+      peopleCount: 1,
+      startSlotId: 0,
+      tableId: 0,
+      bookingType: 'online',
+    }
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showSuccess, setShowSuccess] = useState(false);
   const {
@@ -33,8 +41,26 @@ const ReservationForm: React.FC<ReservationFormProps> = ({ onSubmit, onCancel, i
   } = useAvailableSlots(formData.reservationDate?.toString() || '', formData.peopleCount || 0);
 
   useEffect(() => {
+    if (initialData) {
+      console.log('initialData', initialData);
+      setFormData(prev => {
+        let dateValue = initialData.reservationDate;
+        // Convert timestamp or ISO string to 'YYYY-MM-DD'
+        if (dateValue) {
+          if (typeof dateValue === 'number' || !isNaN(Number(dateValue))) {
+            const d = new Date(Number(dateValue));
+            dateValue = d.toISOString().split('T')[0];
+          } else if (typeof dateValue === 'string' && dateValue.includes('T')) {
+            dateValue = dateValue.split('T')[0];
+          }
+        }
+        return { ...initialData, reservationDate: dateValue };
+      });
+    }
+  }, [initialData]);
+
+  useEffect(() => {
     console.log('formData', formData);
-    console.log('reservationDate', formData.reservationDate);
   }, [formData, formData.reservationDate]);
 
   const validateStep1 = (): boolean => {
@@ -262,9 +288,9 @@ const ReservationForm: React.FC<ReservationFormProps> = ({ onSubmit, onCancel, i
                   type="number"
                   id="peopleCount"
                   name="peopleCount"
-                  min="1"
-                  value={formData.peopleCount || 1}
+                  value={formData.peopleCount}
                   onChange={handleChange}
+                  min="1"
                   className={`mt-1 block w-full rounded-md border ${
                     errors.peopleCount ? 'border-red-500' : 'border-gray-300'
                   } shadow-sm p-2`}
@@ -334,7 +360,9 @@ const ReservationForm: React.FC<ReservationFormProps> = ({ onSubmit, onCancel, i
                       }));
                     }}
                     className={`p-4 rounded-lg text-center transition-colors cursor-pointer ${
-                      formData.startSlotId === slot.id
+                      formData.startSlotId === slot.id ||
+                      (typeof initialData?.startSlot === 'string' &&
+                        initialData.startSlot === slot.startTime)
                         ? 'bg-blue-600 text-white'
                         : 'bg-white border border-gray-300 hover:border-blue-500'
                     }`}

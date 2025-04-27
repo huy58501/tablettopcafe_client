@@ -86,7 +86,7 @@ const OrderCard = ({
         <div className="flex justify-between items-center mb-2">
           <h3 className="text-xl font-bold text-gray-800">Table {order.id}</h3>
           <div
-            className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusTextColor(order.status)}`}
+            className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusTextColor(order.status)} cursor-pointer`}
           >
             {order.status?.charAt(0).toUpperCase() + order.status?.slice(1).toLowerCase()}
           </div>
@@ -127,7 +127,7 @@ const OrderCard = ({
             onClick={handleConfirm}
             disabled={isLoading || order.status?.toLowerCase() !== 'pending'}
             className="w-full px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 
-                     transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                     transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer"
           >
             <FaCheck className="mr-2" />
             <span>Confirm</span>
@@ -136,7 +136,7 @@ const OrderCard = ({
             onClick={handleReady}
             disabled={isLoading || order.status?.toLowerCase() !== 'confirmed'}
             className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 
-                     transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                     transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer"
           >
             <FaClock className="mr-2" />
             <span>Ready</span>
@@ -207,7 +207,7 @@ export default function KitchenPage() {
     );
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pt-[30px]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -216,7 +216,7 @@ export default function KitchenPage() {
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setFilter('all')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                   filter === 'all'
                     ? 'bg-gray-900 text-white'
                     : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
@@ -226,7 +226,7 @@ export default function KitchenPage() {
               </button>
               <button
                 onClick={() => setFilter('pending')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                   filter === 'pending'
                     ? 'bg-yellow-500 text-white'
                     : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
@@ -236,7 +236,7 @@ export default function KitchenPage() {
               </button>
               <button
                 onClick={() => setFilter('confirmed')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                   filter === 'confirmed'
                     ? 'bg-green-500 text-white'
                     : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
@@ -246,7 +246,7 @@ export default function KitchenPage() {
               </button>
               <button
                 onClick={() => setFilter('ready')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                   filter === 'ready'
                     ? 'bg-blue-500 text-white'
                     : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'

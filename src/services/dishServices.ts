@@ -11,3 +11,31 @@ export const ALL_DISHES = gql`
     }
   }
 `;
+
+export const CREATE_DISH = gql`
+  mutation CreateDish($name: String!, $price: Float!, $category: String!) {
+    createDish(name: $name, price: $price, category: $category) {
+      id
+      name
+      price
+      category
+    }
+  }
+`;
+
+export const UPDATE_DISH = gql`
+  mutation UpdateDish($id: ID!, $name: String, $price: Float, $category: String) {
+    updateDish(id: $id, name: $name, price: $price, category: $category) {
+      id
+      name
+      price
+      category
+    }
+  }
+`;
+
+export const DELETE_DISH = gql`
+  mutation DeleteDish($id: ID!) {
+    deleteDish(id: $id)
+  }
+`;

@@ -27,6 +27,8 @@ interface TableHistoryRecord {
   orderDetails?: HistoryOrderDetails;
 }
 
+type TimeFilter = 'today' | 'week' | 'month';
+
 interface TableHistoryProps {
   tablesData: TableWithOrders[];
 }
@@ -37,6 +39,7 @@ const TableHistory: React.FC<TableHistoryProps> = ({ tablesData }) => {
     null
   );
   const [isHistoryOrderDetailsOpen, setIsHistoryOrderDetailsOpen] = useState(false);
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>('today');
 
   // Format currency to VND with thousands separators
   const formatCurrency = (amount: number) => {
@@ -57,16 +60,34 @@ const TableHistory: React.FC<TableHistoryProps> = ({ tablesData }) => {
 
   useEffect(() => {
     generateTableHistory(tablesData);
-  }, [tablesData]);
+  }, [tablesData, timeFilter]);
+
+  // Get date range based on time filter
+  const getDateRange = () => {
+    const today = new Date();
+    const startDate = new Date();
+    const endDate = new Date();
+    endDate.setHours(23, 59, 59, 999);
+
+    switch (timeFilter) {
+      case 'today':
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'week':
+        startDate.setDate(today.getDate() - 7);
+        break;
+      case 'month':
+        startDate.setMonth(today.getMonth() - 1);
+        break;
+    }
+
+    return { startDate, endDate };
+  };
 
   // Generate table history from tables data
   const generateTableHistory = (tablesData: TableWithOrders[]) => {
     const history: TableHistoryRecord[] = [];
-    const today = new Date();
-    const startOfDay = new Date(today);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(today);
-    endOfDay.setHours(23, 59, 59, 999);
+    const { startDate, endDate } = getDateRange();
 
     if (tablesData && tablesData.length > 0) {
       const allOrders: any[] = [];
@@ -88,7 +109,7 @@ const TableHistory: React.FC<TableHistoryProps> = ({ tablesData }) => {
 
       allOrders.forEach(order => {
         const orderDate = new Date(parseInt(order.createdAt));
-        if (orderDate >= startOfDay && orderDate <= endOfDay) {
+        if (orderDate >= startDate && orderDate <= endDate) {
           history.push({
             id: history.length + 1,
             tableId: order.tableId,
@@ -121,13 +142,24 @@ const TableHistory: React.FC<TableHistoryProps> = ({ tablesData }) => {
     setIsHistoryOrderDetailsOpen(true);
   };
 
+  const getFilterLabel = (filter: TimeFilter) => {
+    switch (filter) {
+      case 'today':
+        return 'Today';
+      case 'week':
+        return 'Last 7 Days';
+      case 'month':
+        return 'Last 30 Days';
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header Card */}
       <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-semibold text-gray-800">Today's Orders History</h2>
+            <h2 className="text-xl font-semibold text-gray-800">Orders History</h2>
             <p className="text-sm text-gray-500 mt-1 flex items-center gap-2">
               <FaCalendarAlt className="text-blue-500" />
               {new Date().toLocaleDateString('en-US', {
@@ -138,9 +170,24 @@ const TableHistory: React.FC<TableHistoryProps> = ({ tablesData }) => {
               })}
             </p>
           </div>
-          <div className="hidden sm:block">
+          <div className="flex items-center gap-4">
             <div className="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg font-medium">
               Total Orders: {tableHistory.length}
+            </div>
+            <div className="flex gap-2">
+              {(['today', 'week', 'month'] as TimeFilter[]).map(filter => (
+                <button
+                  key={filter}
+                  onClick={() => setTimeFilter(filter)}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    timeFilter === filter
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {getFilterLabel(filter)}
+                </button>
+              ))}
             </div>
           </div>
         </div>
@@ -151,8 +198,8 @@ const TableHistory: React.FC<TableHistoryProps> = ({ tablesData }) => {
         {tableHistory.length === 0 ? (
           <div className="p-8 text-center">
             <FaReceipt className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Orders Today</h3>
-            <p className="text-gray-500">There are no completed orders for today yet.</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No Orders Found</h3>
+            <p className="text-gray-500">There are no completed orders for the selected period.</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-100">

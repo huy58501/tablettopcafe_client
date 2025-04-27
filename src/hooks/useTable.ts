@@ -1,10 +1,12 @@
 import { useMutation, useQuery } from '@apollo/client';
 import { GET_ALL_TABLES, UPDATE_TABLE_STATUS } from '../services/tableServices';
+import { UPDATE_BOOKING_TABLE_CHANGE } from '../services/bookingServices';
 
 export const useTables = () => {
   const { data: tablesData, loading: tablesLoading } = useQuery(GET_ALL_TABLES);
   const [updateTableStatus, { loading: updateTableStatusLoading, error: updateTableStatusError }] =
     useMutation(UPDATE_TABLE_STATUS);
+  const [updateBookingTableChange] = useMutation(UPDATE_BOOKING_TABLE_CHANGE);
 
   const handleUpdateTableStatus = async (tableId: number, status: string) => {
     try {
@@ -14,8 +16,17 @@ export const useTables = () => {
     }
   };
 
+  const handleUpdateBookingTableChange = async (id: number, tableId: number) => {
+    try {
+      await updateBookingTableChange({ variables: { id, tableId } });
+    } catch (error) {
+      console.error('Error updating booking table change:', error);
+    }
+  };
+
   return {
     handleUpdateTableStatus,
+    handleUpdateBookingTableChange,
     tablesData,
     tablesLoading,
     updateTableStatusLoading,

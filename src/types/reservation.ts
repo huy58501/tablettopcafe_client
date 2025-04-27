@@ -1,4 +1,4 @@
-export type ReservationStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed';
+export type ReservationStatus = 'Pending' | 'Confirmed' | 'Cancelled' | 'Completed';
 
 export interface TimeSlot {
   id: number;

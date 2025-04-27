@@ -1,7 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Table, Booking } from '../types/reservation';
+import { Table, Booking, ReservationStatus } from '../types/reservation';
 import { useMutation, useQuery } from '@apollo/client';
-import { GET_ALL_BOOKINGS, CREATE_BOOKING } from '@/services/bookingServices';
+import {
+  GET_ALL_BOOKINGS,
+  CREATE_BOOKING,
+  UPDATE_BOOKING_STATUS,
+  DELETE_BOOKING,
+  UPDATE_BOOKING,
+} from '@/services/bookingServices';
 
 export const useReservations = () => {
   const [reservations, setReservations] = useState<Booking[]>([]);
@@ -16,9 +22,15 @@ export const useReservations = () => {
   } = useQuery(GET_ALL_BOOKINGS);
   const [createBooking, { loading: mutationLoading, error: mutationError }] =
     useMutation(CREATE_BOOKING);
+  const [updateBookingStatus, { loading: updateLoading, error: updateError }] =
+    useMutation(UPDATE_BOOKING_STATUS);
+  const [deleteBooking, { loading: deleteLoading, error: deleteError }] =
+    useMutation(DELETE_BOOKING);
+  const [updateBooking] = useMutation(UPDATE_BOOKING);
 
   useEffect(() => {
     if (bookings) {
+      console.log('bookings', bookings);
       const newBooking = bookings.allBooking.map((booking: Booking) => ({
         ...booking,
         startSlot: booking.startSlot.startTime,
@@ -31,11 +43,6 @@ export const useReservations = () => {
       setError(bookingError.message);
     }
   }, [bookings]);
-
-  // For debugging
-  useEffect(() => {
-    console.log('reservations hook data', reservations);
-  }, [reservations]);
 
   const handleSubmit = async (formData: Booking) => {
     try {
@@ -59,18 +66,36 @@ export const useReservations = () => {
     }
   };
 
-  // Display LoadingModal when data is being processed
-  // if (loading || mutationLoading) {
-  //   return {
-  //     reservations: [],
-  //     tables: [],
-  //     loading: true,
-  //     error: null,
-  //     handleSubmit,
-  //     isLoading: true,
-  //     refetch,
-  //   };
-  // }
+  const handleUpdate = async (id: string, formData: Booking) => {
+    try {
+      await updateBooking({
+        variables: {
+          bookingId: parseInt(id),
+          ...formData,
+        },
+      });
+    } catch (error) {
+      console.error('Error updating booking:', error);
+    }
+  };
+
+  const handleUpdateStatus = async (id: string, status: ReservationStatus) => {
+    console.log('id', id);
+    console.log('status', status);
+    try {
+      await updateBookingStatus({ variables: { id: parseInt(id), status: status } });
+    } catch (error) {
+      console.error('Error updating status:', error);
+    }
+  };
+
+  const handleReservationDelete = async (id: string) => {
+    try {
+      await deleteBooking({ variables: { id: parseInt(id) } });
+    } catch (error) {
+      console.error('Error deleting booking:', error);
+    }
+  };
 
   return {
     reservations,
@@ -80,5 +105,10 @@ export const useReservations = () => {
     handleSubmit,
     isLoading: false,
     refetch,
+    handleUpdateStatus,
+    handleReservationDelete,
+    handleUpdate,
+    updateLoading,
+    updateError,
   };
 };

@@ -13,23 +13,31 @@ import {
   FaExchangeAlt,
   FaCheck,
 } from 'react-icons/fa';
-import { OrderItem } from '@/types/table';
 import { ExtendedOrder } from '../Tables';
 import QRPayment from './QRPayment';
 import SpinningModal from '@/components/UI/SpinningModal';
+import ChangeTableModal from './ChangeTableModal';
 
 interface OrderDetailsProps {
   order: ExtendedOrder;
   onClose: () => void;
   onSplitBill: () => void;
   onConfirm: (paymentData: { paymentMethod: string; amount: number; reference: string }) => void;
+  onTableChange?: (newTableId: number) => void;
 }
 
-const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onClose, onSplitBill, onConfirm }) => {
+const OrderDetails: React.FC<OrderDetailsProps> = ({
+  order,
+  onClose,
+  onSplitBill,
+  onConfirm,
+  onTableChange,
+}) => {
   const [isQRPaymentOpen, setIsQRPaymentOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [paymentReference, setPaymentReference] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isTableChangeModalOpen, setIsTableChangeModalOpen] = useState(false);
 
   // Format currency to VND with thousands separators
   const formatCurrency = (amount: number) => {
@@ -64,6 +72,13 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onClose, onSplitBill
       handlePaymentComplete();
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const handleTableChange = (newTableId: number) => {
+    if (onTableChange) {
+      onTableChange(newTableId);
+      onClose();
     }
   };
 
@@ -179,17 +194,25 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onClose, onSplitBill
 
           {/* Bottom Actions Bar - Fixed on Mobile */}
           <div className="bg-white border-t border-gray-200 p-4 md:p-6 flex-none">
-            <div className="flex gap-2 max-w-[1000px] mx-auto">
+            <div className="flex flex-wrap gap-2 max-w-[1000px] mx-auto">
               <button
                 onClick={onClose}
-                className="flex-1 py-2.5 md:py-3 px-3 md:px-4 border border-gray-200 text-gray-700 font-medium 
+                className="flex-1 min-w-[120px] py-2.5 md:py-3 px-3 md:px-4 border border-gray-200 text-gray-700 font-medium 
                          rounded-xl hover:bg-gray-50 transition-colors text-sm cursor-pointer"
               >
                 Close
               </button>
               <button
+                onClick={() => setIsTableChangeModalOpen(true)}
+                className="flex-1 min-w-[120px] py-2.5 md:py-3 px-3 md:px-4 bg-purple-600 text-white font-medium rounded-xl 
+                         hover:bg-purple-700 transition-colors text-sm flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <FaExchangeAlt className="text-sm" />
+                Change Table
+              </button>
+              <button
                 onClick={onSplitBill}
-                className="flex-1 py-2.5 md:py-3 px-3 md:px-4 bg-blue-600 text-white font-medium rounded-xl 
+                className="flex-1 min-w-[120px] py-2.5 md:py-3 px-3 md:px-4 bg-blue-600 text-white font-medium rounded-xl 
                          hover:bg-blue-700 transition-colors text-sm flex items-center justify-center gap-2 cursor-pointer"
               >
                 <FaMoneyBill className="text-sm" />
@@ -197,7 +220,7 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onClose, onSplitBill
               </button>
               <button
                 onClick={handlePayment}
-                className="flex-1 py-2.5 md:py-3 px-3 md:px-4 bg-green-600 text-white font-medium rounded-xl 
+                className="flex-1 min-w-[120px] py-2.5 md:py-3 px-3 md:px-4 bg-green-600 text-white font-medium rounded-xl 
                          hover:bg-green-700 transition-colors text-sm flex items-center justify-center gap-2 cursor-pointer"
               >
                 <FaCheck className="text-sm" />
@@ -206,6 +229,14 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onClose, onSplitBill
             </div>
           </div>
         </motion.div>
+
+        {/* Table Change Modal */}
+        <ChangeTableModal
+          isOpen={isTableChangeModalOpen}
+          onClose={() => setIsTableChangeModalOpen(false)}
+          onConfirm={handleTableChange}
+          currentTableId={order.tableId}
+        />
 
         {/* QR Payment Modal */}
         <QRPayment

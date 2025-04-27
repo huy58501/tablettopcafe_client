@@ -128,7 +128,7 @@ const ShiftManager: React.FC = () => {
   const hasActiveShift = user?.clockIns?.some((record: any) => record.status === 'active') || false;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-gray-50 p-4 pt-[60px]">
       {/* Loading Spinner Modal */}
       {isLoading && (
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
@@ -138,6 +138,7 @@ const ShiftManager: React.FC = () => {
           </div>
         </div>
       )}
+      <h1 className="text-2xl font-bold text-gray-800 py-4">Welcome {user?.username}</h1>
 
       {/* Ending Shift Spinner Modal */}
       {isEndingShift && (

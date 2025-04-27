@@ -3,8 +3,7 @@ import { useReservations } from '../../../hooks/useReservations';
 import ReservationList from './ReservationList';
 import ReservationCalendar from './ReservationCalendar';
 import ReservationForm from './modal/ReservationForm';
-import ReservationModal from './modal/ReservationModal';
-import { Booking, ReservationStatus, Table } from '../../../types/reservation';
+import { Booking, ReservationStatus } from '../../../types/reservation';
 import {
   FaList,
   FaCalendarAlt,
@@ -16,6 +15,7 @@ import {
   FaCalendar,
 } from 'react-icons/fa';
 import SpinningModal from '@/components/UI/SpinningModal';
+import { FiPlus } from 'react-icons/fi';
 
 // Custom button component for consistent styling
 interface ButtonProps {
@@ -78,26 +78,58 @@ export default function TableReservations() {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const {
     reservations,
-    tables,
     loading,
     error,
     handleSubmit: submitReservation,
     isLoading,
     refetch,
+    handleUpdateStatus,
+    handleReservationDelete,
+    handleUpdate,
   } = useReservations();
 
   // Handle reservation edit
-  const handleEdit = (reservation: Booking) => {
-    setSelectedReservation(reservation);
-    setShowForm(true);
-    setShowModal(false);
+  const handleEdit = async (reservation: Booking) => {
+    console.log('reservation edit in table reservations', reservation);
+    setIsSubmitting(true);
+    try {
+      setShowModal(false);
+      await handleUpdate(reservation.id.toString(), reservation);
+      await refetch();
+      setIsSubmitting(false);
+    } catch (error) {
+      console.error('TableReservations - Error updating reservation:', error);
+      setIsSubmitting(false);
+    }
+  };
+  // Handle reservation delete
+  const handleDelete = async (id: string) => {
+    setIsSubmitting(true);
+    setShowModal(true);
+    try {
+      setShowModal(false);
+      await handleReservationDelete(id);
+      await refetch();
+      setIsSubmitting(false);
+    } catch (error) {
+      console.error('TableReservations - Error deleting reservation:', error);
+      setIsSubmitting(false);
+    }
   };
 
-  // Handle reservation delete
-  const handleDelete = async (id: string) => {};
-
   // Handle status change
-  const handleStatusChange = async (id: string, status: ReservationStatus) => {};
+  const handleStatusChange = async (id: string, status: ReservationStatus) => {
+    setIsSubmitting(true);
+    try {
+      setShowModal(false);
+      await handleUpdateStatus(id, status);
+      await refetch();
+      setIsSubmitting(false);
+    } catch (error) {
+      console.error('TableReservations - Error changing status:', error);
+      setIsSubmitting(false);
+    }
+  };
 
   // Handle calendar reservation selection
   const handleSelectReservation = (reservation: Booking) => {
@@ -109,11 +141,6 @@ export default function TableReservations() {
   const handleCancel = () => {
     setShowForm(false);
     setSelectedReservation(null);
-  };
-
-  // Handle modal close
-  const handleCloseModal = () => {
-    setShowModal(false);
   };
 
   // Handle form submission
@@ -133,11 +160,11 @@ export default function TableReservations() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pt-[60px]">
       <SpinningModal isOpen={isLoading} message="Loading reservations..." />
       <SpinningModal isOpen={isSubmitting} message="Submitting reservation..." />
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="bg-white rounded-lg shadow-sm p-2">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
             <div>
               <h1 className="text-2xl font-bold text-gray-800">Table Reservations</h1>
@@ -161,16 +188,16 @@ export default function TableReservations() {
                 <span>Calendar View</span>
               </Button>
 
-              <Button
+              <button
+                className="fixed bottom-6 right-6 z-40 bg-blue-600 text-white rounded-full p-4 shadow-lg hover:bg-blue-700 transition cursor-pointer"
                 onClick={() => {
                   setSelectedReservation(null);
                   setShowForm(true);
                 }}
-                variant="success"
+                aria-label="Add Reservation"
               >
-                <FaPlus className="mr-2" />
-                <span>New Reservation</span>
-              </Button>
+                <FiPlus className="w-6 h-6" />
+              </button>
             </div>
           </div>
 
@@ -243,21 +270,19 @@ export default function TableReservations() {
         </div>
 
         {showForm && (
-          <div className="fixed inset-0 bg-gray-800/80 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg shadow-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+          <div
+            className="fixed inset-0 bg-gray-800/80 flex items-center justify-center p-4 z-50"
+            onClick={handleCancel}
+          >
+            <div
+              className="bg-white rounded-lg shadow-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+              onClick={e => e.stopPropagation()}
+            >
               <ReservationForm
                 onSubmit={handleSubmit}
                 onCancel={handleCancel}
                 isSubmitting={loading}
               />
-            </div>
-          </div>
-        )}
-
-        {showModal && selectedReservation && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full">
-              <ReservationModal reservation={selectedReservation} onClose={handleCloseModal} />
             </div>
           </div>
         )}
