@@ -347,7 +347,7 @@ const AccountPage: React.FC = () => {
                               e.stopPropagation();
                               handleViewEmployee(user);
                             }}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-150"
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-150 cursor-pointer"
                             title="View Employee Details"
                           >
                             <FiUser className="w-5 h-5" />
@@ -357,7 +357,7 @@ const AccountPage: React.FC = () => {
                               e.stopPropagation();
                               handleEdit(user);
                             }}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-150"
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-150 cursor-pointer"
                             title="Edit User"
                           >
                             <FiEdit2 className="w-5 h-5" />
@@ -367,7 +367,7 @@ const AccountPage: React.FC = () => {
                               e.stopPropagation();
                               handleDelete(user);
                             }}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-150"
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-150 cursor-pointer"
                             title="Delete User"
                           >
                             <FiTrash2 className="w-5 h-5" />

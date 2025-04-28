@@ -80,11 +80,29 @@ const ReservationList: React.FC<ReservationListProps> = ({
 
       const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
+      // Helper function to compare only the date parts (local time)
+      const getDateOnly = (date: Date) =>
+        new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const isSameLocalDay = (date1: Date, date2: Date) =>
+        getDateOnly(date1).getTime() === getDateOnly(date2).getTime();
+
+      const getUTCDateOnly = (date: Date) =>
+        new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+      const isSameUTCDate = (date1: Date, date2: Date) =>
+        getUTCDateOnly(date1).getTime() === getUTCDateOnly(date2).getTime();
+
       let matchesDate = true;
       if (dateFilter !== 'all') {
         switch (dateFilter) {
           case 'today':
-            matchesDate = reservationDate.toDateString() === today.toDateString();
+            const resDateUTC = getUTCDateOnly(reservationDate);
+            const todayUTC = getUTCDateOnly(new Date());
+            console.log('Comparing UTC:', {
+              resDateUTC: resDateUTC.toUTCString(),
+              todayUTC: todayUTC.toUTCString(),
+              isSame: resDateUTC.getTime() === todayUTC.getTime(),
+            });
+            matchesDate = resDateUTC.getTime() === todayUTC.getTime();
             break;
           case 'week':
             matchesDate = reservationDate >= startOfWeek && reservationDate <= today;
@@ -98,19 +116,8 @@ const ReservationList: React.FC<ReservationListProps> = ({
       return matchesStatus && matchesSearch && matchesBookingType && matchesDate;
     })
     .sort((a, b) => {
-      // Sort by timestamp (most recent first)
-      const dateA = Number(a.reservationDate);
-      const dateB = Number(b.reservationDate);
-
-      if (dateB !== dateA) {
-        return dateB - dateA; // Most recent date first
-      }
-
-      // If dates are equal, sort by startTime
-      const timeA = typeof a.startSlot === 'object' ? a.startSlot.startTime : '00:00';
-      const timeB = typeof b.startSlot === 'object' ? b.startSlot.startTime : '00:00';
-
-      return timeB.localeCompare(timeA); // Latest time first
+      // Sort by id, high to low
+      return Number(b.id) - Number(a.id);
     });
 
   // Calculate total pages
