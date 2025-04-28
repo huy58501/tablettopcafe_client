@@ -24,7 +24,7 @@ export const CREATE_DISH = gql`
 `;
 
 export const UPDATE_DISH = gql`
-  mutation UpdateDish($id: ID!, $name: String, $price: Float, $category: String) {
+  mutation UpdateDish($id: Int!, $name: String, $price: Float, $category: String) {
     updateDish(id: $id, name: $name, price: $price, category: $category) {
       id
       name
@@ -35,7 +35,7 @@ export const UPDATE_DISH = gql`
 `;
 
 export const DELETE_DISH = gql`
-  mutation DeleteDish($id: ID!) {
+  mutation DeleteDish($id: Int!) {
     deleteDish(id: $id)
   }
 `;

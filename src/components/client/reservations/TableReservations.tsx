@@ -160,7 +160,7 @@ export default function TableReservations() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-[60px]">
+    <div className="min-h-screen bg-gray-50">
       <SpinningModal isOpen={isLoading} message="Loading reservations..." />
       <SpinningModal isOpen={isSubmitting} message="Submitting reservation..." />
       <div className="max-w-7xl mx-auto">

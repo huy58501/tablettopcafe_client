@@ -392,9 +392,11 @@ const AccountPage: React.FC = () => {
                         </p>
                         <p>
                           Last Login:{' '}
-                          {user.loginHistory && user.loginHistory.length > 0
+                          {user.loginHistory &&
+                          user.loginHistory.length > 1 &&
+                          user.loginHistory[user.loginHistory.length - 2]
                             ? new Date(
-                                user.loginHistory[user.loginHistory.length - 2].login_time
+                                user.loginHistory[user.loginHistory.length - 1].login_time
                               ).toLocaleString()
                             : 'N/A'}
                         </p>

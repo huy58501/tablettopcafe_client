@@ -2,7 +2,12 @@ import { useQuery, useMutation } from '@apollo/client';
 import { ALL_DISHES, CREATE_DISH, UPDATE_DISH, DELETE_DISH } from '../services/dishServices';
 
 export const useDishes = () => {
-  const { data: dishesData, loading: dishesLoading, error: dishesError } = useQuery(ALL_DISHES);
+  const {
+    data: dishesData,
+    loading: dishesLoading,
+    error: dishesError,
+    refetch,
+  } = useQuery(ALL_DISHES);
   const [createDish, { loading: createDishLoading, error: createDishError }] =
     useMutation(CREATE_DISH);
   const [updateDish, { loading: updateDishLoading, error: updateDishError }] =
@@ -47,5 +52,6 @@ export const useDishes = () => {
     updateDishError,
     deleteDishLoading,
     deleteDishError,
+    refetch,
   };
 };

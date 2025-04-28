@@ -1,14 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FaTimes, FaMoneyBill, FaShoppingCart, FaChartLine, FaPlus, FaTrash } from 'react-icons/fa';
+import { useQuery } from '@apollo/client';
+import { GET_ORDERS } from '@/services/orderServices';
 
 interface ShiftReportProps {
   isOpen: boolean;
   onClose: () => void;
-  shift: {
-    startTime: string;
-    endTime: string;
+  userData: {
+    id: number;
+    clockIn: string;
+    clockOut: string;
+    moneyIn: number;
+    moneyOut: number;
+    status: string;
+    userId: number;
+    note: string;
   };
+  onSaveReport?: (reportData: ShiftReportData) => void;
 }
 
 interface Expense {
@@ -18,24 +27,103 @@ interface Expense {
   category: string;
 }
 
-const ShiftReport: React.FC<ShiftReportProps> = ({ isOpen, onClose, shift }) => {
+interface ShiftReportData {
+  startTime: string;
+  endTime: string;
+  totalSales: number;
+  totalOrders: number;
+  paymentMethods: {
+    cash: number;
+    card: number;
+  };
+  expenses: Expense[];
+  totalExpenses: number;
+  netIncome: number;
+  moneyIn: number;
+  moneyOut: number;
+  cashout: number;
+}
+
+interface Order {
+  id: number;
+  total: number;
+  payment?: string;
+  createdAt: string;
+  status: string;
+}
+
+const ShiftReport: React.FC<ShiftReportProps> = ({ isOpen, onClose, userData, onSaveReport }) => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [newExpense, setNewExpense] = useState({
     description: '',
     amount: '',
     category: 'supplies',
   });
-
-  // Mock data - replace with actual data from your system
-  const salesData = {
-    totalSales: 2500000,
-    totalOrders: 25,
-    averageOrderValue: 100000,
+  const [moneyIn, setMoneyIn] = useState<number>(0);
+  const [moneyOut, setMoneyOut] = useState<number>(0);
+  const [cashout, setCashout] = useState<number>(0);
+  const [salesData, setSalesData] = useState({
+    totalSales: 0,
+    totalOrders: 0,
     paymentMethods: {
-      cash: 1500000,
-      card: 1000000,
+      cash: 0,
+      card: 0,
     },
-  };
+  });
+
+  // Fetch orders
+  const { data: ordersData, loading: ordersLoading } = useQuery(GET_ORDERS);
+
+  useEffect(() => {
+    // Calculate cashout (money in - money out)
+    setCashout(moneyIn - moneyOut || 0);
+    console.log('userData in report', userData);
+  }, [userData, moneyIn, moneyOut]);
+
+  useEffect(() => {
+    if (ordersData && ordersData.allOrders) {
+      // Get today's date in YYYY-MM-DD format
+      const today = new Date().toISOString().split('T')[0];
+      // Filter orders for today and only include paid orders
+      const todayOrders = ordersData.allOrders.filter((order: Order) => {
+        try {
+          // Check if createdAt is a valid timestamp
+          if (!order.createdAt) return false;
+
+          // Parse the timestamp (milliseconds since epoch)
+          const timestamp = parseInt(order.createdAt, 10);
+          if (isNaN(timestamp)) return false;
+          // Create date from timestamp
+          const orderDate = new Date(timestamp);
+          // Check if the date is valid
+          if (isNaN(orderDate.getTime())) return false;
+
+          // Format the date to YYYY-MM-DD for comparison
+          const formattedDate = orderDate.toISOString().split('T')[0];
+          // Only include paid orders from today
+          return formattedDate === today;
+        } catch (error) {
+          console.error('Error parsing date:', error);
+          return false;
+        }
+      });
+      console.log('todayOrders', todayOrders);
+      // Calculate total sales
+      const totalSales = todayOrders.reduce((sum: number, order: Order) => sum + order.total, 0);
+      // For simplicity, assume all orders are cash payments
+      const cashTotal = totalSales;
+      const cardTotal = 0;
+
+      setSalesData({
+        totalSales,
+        totalOrders: todayOrders.length,
+        paymentMethods: {
+          cash: cashTotal,
+          card: cardTotal,
+        },
+      });
+    }
+  }, [ordersData]);
 
   const handleAddExpense = () => {
     if (newExpense.description && newExpense.amount) {
@@ -58,6 +146,26 @@ const ShiftReport: React.FC<ShiftReportProps> = ({ isOpen, onClose, shift }) => 
 
   const handleRemoveExpense = (id: number) => {
     setExpenses(prev => prev.filter(expense => expense.id !== id));
+  };
+
+  const handleSaveReport = () => {
+    if (onSaveReport) {
+      const reportData: ShiftReportData = {
+        startTime: userData.clockIn,
+        endTime: userData.clockOut,
+        totalSales: salesData.totalSales,
+        totalOrders: salesData.totalOrders,
+        paymentMethods: salesData.paymentMethods,
+        expenses,
+        totalExpenses,
+        netIncome,
+        moneyIn,
+        moneyOut,
+        cashout,
+      };
+      onSaveReport(reportData);
+    }
+    onClose();
   };
 
   const formatCurrency = (amount: number) => {
@@ -88,7 +196,7 @@ const ShiftReport: React.FC<ShiftReportProps> = ({ isOpen, onClose, shift }) => 
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-white w-full max-w-md rounded-2xl overflow-hidden shadow-xl"
+        className="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-y-auto max-h-[90vh]"
       >
         {/* Header */}
         <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
@@ -107,11 +215,13 @@ const ShiftReport: React.FC<ShiftReportProps> = ({ isOpen, onClose, shift }) => 
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <span className="text-xs text-gray-500">Start Time</span>
-                <p className="text-sm font-medium text-gray-800">{formatTime(shift.startTime)}</p>
+                <p className="text-sm font-medium text-gray-800">{formatTime(userData?.clockIn)}</p>
               </div>
               <div>
                 <span className="text-xs text-gray-500">End Time</span>
-                <p className="text-sm font-medium text-gray-800">{formatTime(shift.endTime)}</p>
+                <p className="text-sm font-medium text-gray-800">
+                  {formatTime(userData?.clockOut)}
+                </p>
               </div>
             </div>
           </div>
@@ -123,33 +233,67 @@ const ShiftReport: React.FC<ShiftReportProps> = ({ isOpen, onClose, shift }) => 
               Sales Summary
             </h3>
             <div className="bg-blue-50 rounded-xl p-4 space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-blue-700">Total Sales</span>
-                <span className="text-sm font-semibold text-blue-700">
-                  {formatCurrency(salesData.totalSales)}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-blue-700">Total Orders</span>
-                <span className="text-sm font-medium text-blue-700">{salesData.totalOrders}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-blue-700">Average Order</span>
-                <span className="text-sm font-medium text-blue-700">
-                  {formatCurrency(salesData.averageOrderValue)}
-                </span>
-              </div>
-              <div className="border-t border-blue-100 pt-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-blue-700">Cash Payments</span>
-                  <span className="text-sm font-medium text-blue-700">
-                    {formatCurrency(salesData.paymentMethods.cash)}
-                  </span>
+              {ordersLoading ? (
+                <div className="text-center py-4">
+                  <p className="text-sm text-blue-700">Loading sales data...</p>
                 </div>
-                <div className="flex justify-between items-center mt-1">
-                  <span className="text-sm text-blue-700">Card Payments</span>
-                  <span className="text-sm font-medium text-blue-700">
-                    {formatCurrency(salesData.paymentMethods.card)}
+              ) : (
+                <>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-blue-700">Total Sales</span>
+                    <span className="text-sm font-semibold text-blue-700">
+                      {formatCurrency(salesData.totalSales)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-blue-700">Total Orders</span>
+                    <span className="text-sm font-medium text-blue-700">
+                      {salesData.totalOrders}
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Money In/Out */}
+          <div className="space-y-3 mb-6">
+            <h3 className="text-sm font-medium text-gray-800 flex items-center gap-2">
+              <FaMoneyBill className="w-4 h-4 text-green-500" />
+              Cash Management
+            </h3>
+            <div className="bg-green-50 rounded-xl p-4 space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-green-700">Money In</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    value={moneyIn}
+                    onChange={e => setMoneyIn(Number(e.target.value))}
+                    className="w-24 px-2 py-1 text-sm bg-white border border-green-200 rounded-lg 
+                             focus:outline-none focus:border-green-500"
+                  />
+                  <span className="text-sm font-medium text-green-700">VND</span>
+                </div>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-green-700">Money Out</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    value={moneyOut}
+                    onChange={e => setMoneyOut(Number(e.target.value))}
+                    className="w-24 px-2 py-1 text-sm bg-white border border-green-200 rounded-lg 
+                             focus:outline-none focus:border-green-500"
+                  />
+                  <span className="text-sm font-medium text-green-700">VND</span>
+                </div>
+              </div>
+              <div className="border-t border-green-100 pt-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-green-700">Cashout</span>
+                  <span className="text-sm font-semibold text-green-700">
+                    {formatCurrency(cashout)}
                   </span>
                 </div>
               </div>
@@ -246,6 +390,12 @@ const ShiftReport: React.FC<ShiftReportProps> = ({ isOpen, onClose, shift }) => 
                   {formatCurrency(totalExpenses)}
                 </span>
               </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Cashout</span>
+                <span className="text-sm font-medium text-green-600">
+                  {formatCurrency(cashout)}
+                </span>
+              </div>
               <div className="flex justify-between items-center pt-2 border-t border-gray-100">
                 <span className="text-base font-medium text-gray-800">Net Income</span>
                 <span className="text-base font-semibold text-green-600">
@@ -253,6 +403,17 @@ const ShiftReport: React.FC<ShiftReportProps> = ({ isOpen, onClose, shift }) => 
                 </span>
               </div>
             </div>
+          </div>
+
+          {/* Save Button */}
+          <div className="mt-6">
+            <button
+              onClick={handleSaveReport}
+              className="w-full py-2 bg-green-600 text-white rounded-lg text-sm 
+                       hover:bg-green-700 transition-colors"
+            >
+              Save Report
+            </button>
           </div>
         </div>
       </motion.div>

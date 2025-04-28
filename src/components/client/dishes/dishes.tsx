@@ -1,21 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDishes } from '@/hooks/useDishes';
 import { Dish } from '@/types/dish';
 import { FiEdit, FiTrash2, FiPlus } from 'react-icons/fi';
 import DishFormModal from './Modal/DishFormModal';
 import ConfirmDialog from './Modal/ConfirmDialog';
+import SpinningModal from '@/components/UI/SpinningModal';
 
 export default function Dishes() {
-  const { dishesData, dishesLoading, dishesError } = useDishes();
+  const { dishesData, dishesLoading, dishesError, createDish, updateDish, deleteDish, refetch } =
+    useDishes();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingDish, setEditingDish] = useState<Dish | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deletingDish, setDeletingDish] = useState<Dish | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // Group dishes by category
   const dishesByCategory: { [category: string]: Dish[] } = {};
   if (dishesData && dishesData.allDishes) {
-    dishesData.allDishes.forEach((dish: Dish) => {
+    // Sort dishes by id ascending
+    const sortedDishes = [...dishesData.allDishes].sort(
+      (a: Dish, b: Dish) => Number(a.id) - Number(b.id)
+    );
+    sortedDishes.forEach((dish: Dish) => {
       const cat = dish.category || 'Uncategorized';
       if (!dishesByCategory[cat]) dishesByCategory[cat] = [];
       dishesByCategory[cat].push(dish);
@@ -35,19 +43,56 @@ export default function Dishes() {
     setDeletingDish(dish);
     setConfirmOpen(true);
   };
-  const handleSave = (dish: Partial<Dish>) => {
-    // Call your API to add or update
-    setModalOpen(false);
+  const handleSave = async (dish: Partial<Dish>) => {
+    setActionLoading(true);
+    setActionError(null);
+    try {
+      if (editingDish) {
+        // Update
+        await updateDish({
+          variables: {
+            id: Number(editingDish.id),
+            name: dish.name,
+            price: dish.price,
+            category: dish.category,
+          },
+        });
+      } else {
+        // Create
+        await createDish({
+          variables: { name: dish.name, price: dish.price, category: dish.category },
+        });
+      }
+      setModalOpen(false);
+      await refetch();
+    } catch (err) {
+      setActionError('Failed to save dish.');
+    } finally {
+      setActionLoading(false);
+    }
   };
-  const handleConfirmDelete = () => {
-    // Call your API to delete
-    setConfirmOpen(false);
+  const handleConfirmDelete = async () => {
+    if (!deletingDish) return;
+    setActionLoading(true);
+    setActionError(null);
+    try {
+      await deleteDish({ variables: { id: Number(deletingDish.id) } });
+      setConfirmOpen(false);
+      await refetch();
+    } catch (err) {
+      setActionError('Failed to delete dish.');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-6 px-2 sm:px-4 pt-[60px]">
+    <div className="min-h-screen bg-gray-50 py-6 px-2 sm:px-4">
+      <SpinningModal isOpen={actionLoading} message="Processing..." />
       {dishesLoading && <div className="text-center text-gray-500">Loading...</div>}
       {dishesError && <div className="text-center text-red-500">Error loading dishes.</div>}
+
+      {actionError && <div className="text-center text-red-500">{actionError}</div>}
 
       {/* Add Dish Floating Button */}
       <button
@@ -70,14 +115,14 @@ export default function Dishes() {
                 {/* Edit/Delete Buttons */}
                 <div className="absolute top-2 right-2 flex gap-2">
                   <button
-                    className="p-2 rounded-full bg-gray-100 hover:bg-blue-100 text-blue-600"
+                    className="p-2 rounded-full bg-gray-100 hover:bg-blue-100 text-blue-600 cursor-pointer"
                     onClick={() => handleEdit(dish)}
                     aria-label="Edit"
                   >
                     <FiEdit className="w-4 h-4" />
                   </button>
                   <button
-                    className="p-2 rounded-full bg-gray-100 hover:bg-red-100 text-red-600"
+                    className="p-2 rounded-full bg-gray-100 hover:bg-red-100 text-red-600 cursor-pointer"
                     onClick={() => handleDelete(dish)}
                     aria-label="Delete"
                   >

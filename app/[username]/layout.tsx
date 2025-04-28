@@ -24,9 +24,9 @@ export default async function Layout({
   const menuItems = isAdmin ? menuItemsAdmin(username) : menuItemsClient(username);
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
+    <div className="flex flex-col md:flex-row min-h-screen bg-gray-100">
       <Sidebar title={isAdmin ? 'Admin Dashboard' : 'Client Dashboard'} menuItems={menuItems} />
-      <main className="flex-1 mt-[30px] md:mt-0 w-full overflow-x-hidden">{children}</main>
+      <main className="flex-1 w-full overflow-x-hidden">{children}</main>
     </div>
   );
 }

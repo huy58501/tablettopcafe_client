@@ -9,24 +9,47 @@ export const GET_ALL_CLOCK_INS = gql`
       status
       clockIn
       clockOut
+      moneyIn
+      moneyOut
     }
   }
 `;
 
 export const CREATE_CLOCK_IN = gql`
-  mutation CreateClockIn($userId: String!) {
-    createClockIn(userId: $userId) {
+  mutation CreateClockIn($userId: String!, $moneyIn: Int!, $moneyOut: Int!) {
+    createClockIn(userId: $userId, moneyIn: $moneyIn, moneyOut: $moneyOut) {
+      id
       userId
+      clockIn
+      moneyIn
+      moneyOut
     }
   }
 `;
 
 export const UPDATE_CLOCK_IN = gql`
-  mutation UpdateClockIn($userId: String!, $notes: String!, $status: String!) {
-    updateClockIn(userId: $userId, notes: $notes, status: $status) {
+  mutation UpdateClockIn(
+    $userId: String!
+    $clockOut: DateTime!
+    $notes: String
+    $status: String!
+    $moneyIn: Int!
+    $moneyOut: Int!
+  ) {
+    updateClockIn(
+      userId: $userId
+      clockOut: $clockOut
+      notes: $notes
+      status: $status
+      moneyIn: $moneyIn
+      moneyOut: $moneyOut
+    ) {
       userId
       notes
       status
+      clockOut
+      moneyIn
+      moneyOut
     }
   }
 `;
