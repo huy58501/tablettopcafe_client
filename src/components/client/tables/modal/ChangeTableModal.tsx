@@ -57,7 +57,12 @@ const ChangeTableModal: React.FC<ChangeTableModalProps> = ({
           table.number.toString().includes(searchQuery) ||
           (table.room && table.room.toLowerCase().includes(searchQuery.toLowerCase()));
         const matchesCategory = selectedCategory === 'all' || table.room === selectedCategory;
-        return table.id !== currentTableId && matchesSearch && matchesCategory;
+        return (
+          table.id !== currentTableId &&
+          matchesSearch &&
+          matchesCategory &&
+          (table as any).status === 'available'
+        );
       })
       .sort((a: Table, b: Table) => a.id - b.id);
 
