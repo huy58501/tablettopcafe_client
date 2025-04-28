@@ -223,11 +223,13 @@ const SplitBill: React.FC<SplitBillProps> = ({
 
     // If there are remaining items, prepare for next split
     if (bill1Items.length > 0) {
+      setIsLoading?.(false);
       setBill2Items([]);
       setSplitStep(splitStep + 1);
       setPaymentCompleted(true);
       handlePaymentComplete();
     } else {
+      setIsLoading?.(false);
       // No more items to split, send final data
       handleFinalConfirm([...completedSplits, newSplit]);
       // Loading state will be handled by parent component after this
@@ -302,7 +304,7 @@ const SplitBill: React.FC<SplitBillProps> = ({
             </div>
             <button
               onClick={handleCancel}
-              className="p-2 rounded-full hover:bg-gray-200 transition-colors"
+              className="p-2 rounded-full hover:bg-gray-200 transition-colors cursor-pointer"
             >
               <FaTimes className="text-gray-600" />
             </button>
@@ -312,7 +314,7 @@ const SplitBill: React.FC<SplitBillProps> = ({
         {/* Content */}
         <div className="flex flex-col md:flex-row h-[calc(100vh-60px)] md:h-auto">
           {/* Bill 1 */}
-          <div className="flex-1 p-4 md:p-6 overflow-y-auto border-b md:border-b-0 md:border-r border-gray-100">
+          <div className="flex-1 p-4 md:p-6 overflow-y-auto border-b md:border-b-0 md:border-r border-gray-100 cursor-pointer">
             <div className="flex justify-between items-center mb-3">
               <h3 className="text-base md:text-lg font-medium text-gray-700">Remaining Items</h3>
               <span className="text-base md:text-lg font-semibold text-blue-600">
@@ -335,7 +337,7 @@ const SplitBill: React.FC<SplitBillProps> = ({
           </div>
 
           {/* Bill 2 */}
-          <div className="flex-1 p-4 md:p-6 overflow-y-auto">
+          <div className="flex-1 p-4 md:p-6 overflow-y-auto cursor-pointer">
             <div className="flex justify-between items-center mb-3">
               <h3 className="text-base md:text-lg font-medium text-gray-700">Split {splitStep}</h3>
               <span className="text-base md:text-lg font-semibold text-blue-600">
@@ -377,7 +379,7 @@ const SplitBill: React.FC<SplitBillProps> = ({
             <button
               onClick={handleCancel}
               className="flex-1 py-3 px-4 border border-gray-200 text-gray-700 font-medium 
-                       rounded-xl hover:bg-gray-50 transition-colors text-sm"
+                       rounded-xl hover:bg-gray-50 transition-colors text-sm cursor-pointer"
             >
               Cancel
             </button>
@@ -386,7 +388,7 @@ const SplitBill: React.FC<SplitBillProps> = ({
               disabled={bill2Items.length === 0}
               className="flex-1 py-3 px-4 bg-blue-600 text-white font-medium rounded-xl 
                        hover:bg-blue-700 transition-colors text-sm flex items-center justify-center gap-2
-                       disabled:bg-gray-300 disabled:cursor-not-allowed"
+                       disabled:bg-gray-300 disabled:cursor-not-allowed cursor-pointer"
             >
               <FaCheck className="text-sm" />
               <span>
