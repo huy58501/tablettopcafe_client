@@ -88,8 +88,7 @@ export default function Dishes() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-6 px-2 sm:px-4">
-      <SpinningModal isOpen={actionLoading} message="Processing..." />
-      {dishesLoading && <div className="text-center text-gray-500">Loading...</div>}
+      <SpinningModal isOpen={dishesLoading} message="Loading..." />
       {dishesError && <div className="text-center text-red-500">Error loading dishes.</div>}
 
       {actionError && <div className="text-center text-red-500">{actionError}</div>}

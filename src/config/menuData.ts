@@ -62,10 +62,6 @@ export const menuItemsClient = (username: string) => [
     label: 'Quản Lý Kho',
     href: `/${username}/inventory`,
   },
-  {
-    label: 'Báo Cáo',
-    href: `/${username}/reports`,
-  },
 ];
 
 export const menuItemsAdminClientView = (username: string) => [
