@@ -22,7 +22,6 @@ const ReservationList: React.FC<ReservationListProps> = ({
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedReservation, setSelectedReservation] = useState<string | null>(null);
-  const [bookingTypeFilter, setBookingTypeFilter] = useState<'all' | 'dine-in' | 'online'>('all');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('today');
   const [currentPage, setCurrentPage] = useState(1);
   const reservationsPerPage = 10;
@@ -67,8 +66,8 @@ const ReservationList: React.FC<ReservationListProps> = ({
         reservation.customerName.toLowerCase().includes(searchLower) ||
         reservation.phoneNumber.includes(searchTerm);
 
-      const matchesBookingType =
-        bookingTypeFilter === 'all' || reservation.bookingType === bookingTypeFilter;
+      // Only show online bookings
+      const isOnlineBooking = reservation.bookingType === 'online';
 
       // Date filtering
       const reservationDate = new Date(Number(reservation.reservationDate));
@@ -97,11 +96,6 @@ const ReservationList: React.FC<ReservationListProps> = ({
           case 'today':
             const resDateUTC = getUTCDateOnly(reservationDate);
             const todayUTC = getUTCDateOnly(new Date());
-            console.log('Comparing UTC:', {
-              resDateUTC: resDateUTC.toUTCString(),
-              todayUTC: todayUTC.toUTCString(),
-              isSame: resDateUTC.getTime() === todayUTC.getTime(),
-            });
             matchesDate = resDateUTC.getTime() === todayUTC.getTime();
             break;
           case 'week':
@@ -113,7 +107,7 @@ const ReservationList: React.FC<ReservationListProps> = ({
         }
       }
 
-      return matchesStatus && matchesSearch && matchesBookingType && matchesDate;
+      return matchesStatus && matchesSearch && isOnlineBooking && matchesDate;
     })
     .sort((a, b) => {
       // Sort by id, high to low
@@ -251,7 +245,7 @@ const ReservationList: React.FC<ReservationListProps> = ({
     <div className="bg-white rounded-lg shadow overflow-visible" style={{ height: '100vh' }}>
       <div className="p-4 border-b border-gray-200">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <h2 className="text-xl font-bold">Reservations</h2>
+          <h2 className="text-xl font-bold">Online Reservations</h2>
 
           <div className="flex flex-col sm:flex-row gap-4 overflow-visible">
             <div className="relative">
@@ -358,47 +352,6 @@ const ReservationList: React.FC<ReservationListProps> = ({
                   </Listbox.Options>
                 </div>
               </Listbox>
-            </div>
-
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-4">
-                <label className="inline-flex items-center">
-                  <input
-                    type="radio"
-                    value="all"
-                    checked={bookingTypeFilter === 'all'}
-                    onChange={e =>
-                      setBookingTypeFilter(e.target.value as 'all' | 'dine-in' | 'online')
-                    }
-                    className="form-radio h-4 w-4 text-blue-600"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">All</span>
-                </label>
-                <label className="inline-flex items-center">
-                  <input
-                    type="radio"
-                    value="dine-in"
-                    checked={bookingTypeFilter === 'dine-in'}
-                    onChange={e =>
-                      setBookingTypeFilter(e.target.value as 'all' | 'dine-in' | 'online')
-                    }
-                    className="form-radio h-4 w-4 text-blue-600"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">Dine-in</span>
-                </label>
-                <label className="inline-flex items-center">
-                  <input
-                    type="radio"
-                    value="online"
-                    checked={bookingTypeFilter === 'online'}
-                    onChange={e =>
-                      setBookingTypeFilter(e.target.value as 'all' | 'dine-in' | 'online')
-                    }
-                    className="form-radio h-4 w-4 text-blue-600"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">Online</span>
-                </label>
-              </div>
             </div>
           </div>
         </div>

@@ -111,7 +111,25 @@ export const UPDATE_BOOKING_TABLE_CHANGE = gql`
     updateBookingTableChange(id: $id, tableId: $tableId) {
       id
       table {
+        id
         number
+        status
+        room
+      }
+      order {
+        id
+        total
+        status
+        orderItems {
+          id
+          quantity
+          price
+          dish {
+            id
+            name
+            price
+          }
+        }
       }
     }
   }

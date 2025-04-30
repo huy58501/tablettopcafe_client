@@ -42,6 +42,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
   const { data: slotData } = useQuery(GET_ALL_SLOTS);
   const { handleUpdateTableStatus } = useTables();
   const [showMobileCart, setShowMobileCart] = useState(false);
+  const [user, setUser] = useState<string | null>(null);
 
   const [order, setOrder] = useState<Order>({
     id: existingOrder?.id || 0,
@@ -72,10 +73,20 @@ const OrderModal: React.FC<OrderModalProps> = ({
   }, [dishesData]);
 
   useEffect(() => {
-    if (existingOrder) {
-      setOrder(existingOrder);
-    }
-  }, [existingOrder]);
+    const fetchData = async () => {
+      try {
+        const response = await fetch(`/api/get-me`, {
+          method: 'POST',
+          credentials: 'include',
+        });
+        const data = await response.json();
+        setUser(data.user.username);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+    fetchData();
+  }, []);
 
   // Format currency to VND with thousands separators
   const formatCurrency = (amount: number) => {
@@ -217,6 +228,7 @@ const OrderModal: React.FC<OrderModalProps> = ({
         variables: {
           bookingId: parseInt(bookingId),
           orderItems,
+          createdBy: user || '',
         },
       });
 

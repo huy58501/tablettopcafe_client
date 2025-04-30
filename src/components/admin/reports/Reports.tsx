@@ -142,7 +142,13 @@ const Reports = () => {
       });
 
       // Calculate total revenue from orders
-      const totalRevenue = orders.reduce((sum: number, order: any) => sum + order.total, 0);
+      const totalRevenue = orders.reduce((sum: number, order: any) => {
+        // Only count paid orders
+        if (order.status.toLowerCase() === 'paid') {
+          return sum + order.total;
+        }
+        return sum;
+      }, 0);
 
       // Calculate total revenue from reports
       const totalRevenueByReport = allReportData.allReport.reduce(
@@ -159,8 +165,10 @@ const Reports = () => {
       // Calculate revenue by day
       const revenueByDay: { [key: string]: number } = {};
       orders.forEach((order: any) => {
-        const date = format(new Date(Number(order.createdAt)), 'yyyy-MM-dd');
-        revenueByDay[date] = (revenueByDay[date] || 0) + order.total;
+        if (order.status.toLowerCase() === 'paid') {
+          const date = format(new Date(order.createdAt), 'yyyy-MM-dd');
+          revenueByDay[date] = (revenueByDay[date] || 0) + order.total;
+        }
       });
 
       // Calculate booking distribution
@@ -173,7 +181,8 @@ const Reports = () => {
       // Calculate order status distribution
       const orderStatusDistribution: { [key: string]: number } = {};
       orders.forEach((order: any) => {
-        orderStatusDistribution[order.status] = (orderStatusDistribution[order.status] || 0) + 1;
+        const status = order.status.toLowerCase();
+        orderStatusDistribution[status] = (orderStatusDistribution[status] || 0) + 1;
       });
 
       // Calculate popular items
@@ -199,44 +208,34 @@ const Reports = () => {
         date: report.date,
       }));
 
-      // Get employee data
-      const employeeDataArray = employeeData.allEmployee.map((employee: any) => ({
-        id: employee.id,
-        fullName: employee.fullName,
-        position: employee.position,
-        email: employee.email,
-        phone: employee.phone,
-        user: employee.user,
-      }));
-
       // Calculate top employees by number of orders handled
       const employeeOrderCounts: { [key: string]: number } = {};
       orders.forEach((order: any) => {
-        // Assume order has a createdBy or userId field for the employee/user who handled it
-        const handlerId = order.createdBy || order.userId || order.employeeId;
-        if (handlerId) {
-          employeeOrderCounts[handlerId] = (employeeOrderCounts[handlerId] || 0) + 1;
+        const createdBy = order.createdBy;
+        if (createdBy) {
+          // Find the corresponding user
+          const user = userData?.allUser?.find((u: any) => u.username === createdBy);
+          const displayName = user ? user.username : createdBy;
+          employeeOrderCounts[displayName] = (employeeOrderCounts[displayName] || 0) + 1;
         }
       });
+
       const topEmployees = Object.entries(employeeOrderCounts)
-        .map(([id, count]) => {
-          const employee = employeeData.allEmployee.find(
-            (emp: any) => emp.user?.id === id || emp.id === id
-          );
-          return {
-            name: employee?.fullName || employee?.user?.username || id,
-            count,
-          };
-        })
+        .map(([username, count]) => ({
+          name: username,
+          count,
+        }))
         .sort((a, b) => b.count - a.count)
         .slice(0, 5);
 
       // Calculate hourly sales distribution
       const hourlySales: { [key: string]: number } = {};
       orders.forEach((order: any) => {
-        const orderDate = new Date(Number(order.createdAt));
-        const hour = orderDate.getHours();
-        hourlySales[hour] = (hourlySales[hour] || 0) + order.total;
+        if (order.status.toLowerCase() === 'paid') {
+          const orderDate = new Date(order.createdAt);
+          const hour = orderDate.getHours();
+          hourlySales[hour] = (hourlySales[hour] || 0) + order.total;
+        }
       });
       const hourlySalesArray = Array.from({ length: 24 }, (_, hour) => ({
         hour: `${hour}:00`,
@@ -254,7 +253,14 @@ const Reports = () => {
         popularItems,
         reportData,
         clockInData: todayClockIns,
-        employeeData: employeeDataArray,
+        employeeData: employeeData.allEmployee.map((employee: any) => ({
+          id: employee.id,
+          fullName: employee.fullName,
+          position: employee.position,
+          email: employee.email,
+          phone: employee.phone,
+          user: employee.user,
+        })),
         topEmployees,
         hourlySalesArray,
       });

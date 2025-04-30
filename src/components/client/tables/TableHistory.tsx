@@ -89,50 +89,76 @@ const TableHistory: React.FC<TableHistoryProps> = ({ tablesData }) => {
     const history: TableHistoryRecord[] = [];
     const { startDate, endDate } = getDateRange();
 
+    console.log('Processing tables data:', tablesData);
+    console.log('Date range:', { startDate, endDate });
+
     if (tablesData && tablesData.length > 0) {
       const allOrders: any[] = [];
       tablesData.forEach(table => {
+        console.log(`Processing table ${table.number}:`, table);
+
         if (table.bookings && table.bookings.length > 0) {
           table.bookings.forEach(booking => {
-            if (booking.order && booking.order.status === 'paid') {
-              allOrders.push({
-                ...booking.order,
-                tableId: table.id,
-                tableNumber: table.number,
-                room: table.room || 'Main Area',
-                capacity: table.capacity,
-              });
+            console.log(`Processing booking:`, booking);
+
+            if (booking.order) {
+              console.log('Found order:', booking.order);
+              // Check for either 'PAID' or 'paid' status
+              if (
+                booking.order.status === 'PAID' ||
+                booking.order.status === 'paid' ||
+                booking.order.status === 'PAID'
+              ) {
+                const orderDate = new Date(booking.order.createdAt);
+                console.log('Order date:', orderDate);
+
+                if (orderDate >= startDate && orderDate <= endDate) {
+                  console.log('Order is within date range');
+                  allOrders.push({
+                    ...booking.order,
+                    tableId: table.id,
+                    tableNumber: table.number,
+                    room: table.room || 'Main Area',
+                    capacity: table.capacity,
+                    orderItems: booking.order.orderItems.map(item => ({
+                      ...item,
+                      name: item.dish.name,
+                      price: item.dish.price,
+                    })),
+                  });
+                }
+              }
             }
           });
         }
       });
 
+      console.log('All collected orders:', allOrders);
+
       allOrders.forEach(order => {
-        const orderDate = new Date(parseInt(order.createdAt));
-        if (orderDate >= startDate && orderDate <= endDate) {
-          history.push({
-            id: history.length + 1,
-            tableId: order.tableId,
-            tableNumber: order.tableNumber,
-            room: order.room,
+        history.push({
+          id: history.length + 1,
+          tableId: order.tableId,
+          tableNumber: order.tableNumber,
+          room: order.room,
+          status: order.status,
+          capacity: order.capacity,
+          timestamp: order.createdAt,
+          action: 'Order Paid',
+          total: formatCurrency(order.total),
+          details: `Order #${order.id}`,
+          orderDetails: {
+            id: order.id,
+            orderItems: order.orderItems,
+            total: order.total,
             status: order.status,
-            capacity: order.capacity,
-            timestamp: order.createdAt,
-            action: 'Order Paid',
-            total: formatCurrency(order.total),
-            details: `Order #${order.id}`,
-            orderDetails: {
-              id: order.id,
-              orderItems: order.orderItems,
-              total: order.total,
-              status: order.status,
-              createdAt: order.createdAt,
-            },
-          });
-        }
+            createdAt: order.createdAt,
+          },
+        });
       });
     }
 
+    console.log('Final history:', history);
     history.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     setTableHistory(history);
   };

@@ -11,7 +11,7 @@ import {
 
 export const useReservations = () => {
   const [reservations, setReservations] = useState<Booking[]>([]);
-  const [tables, setTables] = useState<Table[]>([]);
+  const [tables, _setTables] = useState<Table[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const {
@@ -20,17 +20,14 @@ export const useReservations = () => {
     error: bookingError,
     refetch,
   } = useQuery(GET_ALL_BOOKINGS);
-  const [createBooking, { loading: mutationLoading, error: mutationError }] =
-    useMutation(CREATE_BOOKING);
+  const [createBooking] = useMutation(CREATE_BOOKING);
   const [updateBookingStatus, { loading: updateLoading, error: updateError }] =
     useMutation(UPDATE_BOOKING_STATUS);
-  const [deleteBooking, { loading: deleteLoading, error: deleteError }] =
-    useMutation(DELETE_BOOKING);
+  const [deleteBooking] = useMutation(DELETE_BOOKING);
   const [updateBooking] = useMutation(UPDATE_BOOKING);
 
   useEffect(() => {
     if (bookings) {
-      console.log('bookings', bookings);
       const newBooking = bookings.allBooking.map((booking: Booking) => ({
         ...booking,
         startSlot: booking.startSlot.startTime,
@@ -60,7 +57,6 @@ export const useReservations = () => {
           tableId: formData.tableId || 0,
         },
       });
-      console.log('Booking created:', result);
     } catch (error) {
       console.error('Error submitting form:', error);
     }
@@ -80,8 +76,6 @@ export const useReservations = () => {
   };
 
   const handleUpdateStatus = async (id: string, status: ReservationStatus) => {
-    console.log('id', id);
-    console.log('status', status);
     try {
       await updateBookingStatus({ variables: { id: parseInt(id), status: status } });
     } catch (error) {

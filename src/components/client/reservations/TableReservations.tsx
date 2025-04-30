@@ -90,7 +90,6 @@ export default function TableReservations() {
 
   // Handle reservation edit
   const handleEdit = async (reservation: Booking) => {
-    console.log('reservation edit in table reservations', reservation);
     setIsSubmitting(true);
     try {
       setShowModal(false);

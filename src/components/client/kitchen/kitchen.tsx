@@ -92,7 +92,7 @@ const OrderCard = ({
           </div>
         </div>
         <div className="text-sm text-gray-600">
-          {order.createdAt && formatDate(new Date(Number(order.createdAt)), 'MMM d, HH:mm')}
+          {order.createdAt && formatDate(new Date(order.createdAt), 'MMM d, HH:mm')}
         </div>
       </div>
 

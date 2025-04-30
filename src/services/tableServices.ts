@@ -8,18 +8,10 @@ export const GET_ALL_TABLES = gql`
       capacity
       status
       room
-      createdAt
       bookings {
         id
         customerName
-        phoneNumber
-        bookingType
-        peopleCount
-        reservationDate
-        durationSlots
-        startSlot {
-          startTime
-        }
+        status
         order {
           id
           status
@@ -36,9 +28,6 @@ export const GET_ALL_TABLES = gql`
             }
           }
         }
-        customerEmail
-        customerNote
-        status
       }
     }
   }

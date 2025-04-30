@@ -15,12 +15,32 @@ import {
   FaDoorOpen,
   FaHistory,
   FaTable,
+  FaCalendarAlt,
 } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
 import { useTables } from '@/hooks/useTable';
 import SpinningModal from '@/components/UI/SpinningModal';
 import { useUpdateOrderStatus } from '@/hooks/useOrder';
 import { useReservations } from '@/hooks/useReservations';
+import TableBooking from './TableBooking';
+import { useBookingNotifications } from '@/hooks/useBookingNotifications';
+
+// Booking interface
+interface Booking {
+  id: string;
+  customerName: string;
+  phoneNumber: string;
+  bookingType: string;
+  peopleCount: number;
+  reservationDate: string;
+  startSlot: {
+    startTime: string;
+  };
+  customerEmail: string | null;
+  customerNote: string;
+  status: string;
+  tableId: number;
+}
 
 // Extended OrderItem interface
 export interface ExtendedOrderItem extends OrderItem {
@@ -49,7 +69,7 @@ const Tables: React.FC = () => {
   const [tables, setTables] = useState<TableWithOrders[]>([]);
   const [tablesByRoom, setTablesByRoom] = useState<TablesByRoom>({});
   const [selectedTable, setSelectedTable] = useState<TableWithOrders | null>(null);
-  const [activeTab, setActiveTab] = useState<'current' | 'history'>('current');
+  const [activeTab, setActiveTab] = useState<'current' | 'history' | 'booking'>('current');
   // Modal states
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [isPeopleCountModalOpen, setIsPeopleCountModalOpen] = useState(false);
@@ -66,6 +86,8 @@ const Tables: React.FC = () => {
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
   const { handleUpdateStatus } = useReservations();
   const [isTableChangeLoading, setIsTableChangeLoading] = useState(false);
+  const { upcomingBookingNotification, setUpcomingBookingNotification } = useBookingNotifications();
+
   // Format currency to VND with thousands separators
   const formatCurrency = (amount: number) => {
     return `${amount.toLocaleString('vi-VN')}`;
@@ -106,14 +128,6 @@ const Tables: React.FC = () => {
       setTablesByRoom(groupedTables);
     }
   }, [tablesData]);
-
-  useEffect(() => {
-    if (selectedTable) {
-      console.log('selectedTable', selectedTable);
-      console.log('selectedTable booking id', selectedTable?.bookings[0]?.id);
-    }
-    console.log('tables', tables);
-  }, [selectedTable, tables]);
 
   const handleTableClick = (table: TableWithOrders) => {
     setSelectedTable(table);
@@ -346,7 +360,7 @@ const Tables: React.FC = () => {
           'Confirmed'
         );
       } else {
-        console.log('Payment amount is incorrect');
+        console.error('Payment amount is incorrect');
       }
     } catch (error) {
       console.error('Payment processing error:', error);
@@ -363,6 +377,46 @@ const Tables: React.FC = () => {
       await handleUpdateBookingTableChange(bookingId || 0, newTableId);
       await handleUpdateTableStatus(currentTableId || 0, 'available');
       await handleUpdateTableStatus(newTableId, 'occupied');
+
+      // Update local state
+      setTables(prevTables =>
+        prevTables.map(table => {
+          if (table.id === currentTableId) {
+            return { ...table, status: 'available', orders: null };
+          }
+          if (table.id === newTableId && selectedTable?.orders) {
+            return {
+              ...table,
+              status: 'occupied',
+              orders: selectedTable.orders,
+              bookings: selectedTable.bookings,
+            };
+          }
+          return table;
+        })
+      );
+
+      // Update tablesByRoom state
+      setTablesByRoom(prevTablesByRoom => {
+        const newTablesByRoom = { ...prevTablesByRoom };
+        Object.keys(newTablesByRoom).forEach(room => {
+          newTablesByRoom[room] = newTablesByRoom[room].map(table => {
+            if (table.id === currentTableId) {
+              return { ...table, status: 'available', orders: null };
+            }
+            if (table.id === newTableId && selectedTable?.orders) {
+              return {
+                ...table,
+                status: 'occupied',
+                orders: selectedTable.orders,
+                bookings: selectedTable.bookings,
+              };
+            }
+            return table;
+          });
+        });
+        return newTablesByRoom;
+      });
     } catch (error) {
       console.error('Error updating booking table change:', error);
     } finally {
@@ -393,6 +447,43 @@ const Tables: React.FC = () => {
         size="medium"
         color="blue"
       />
+
+      {/* Upcoming Booking Notification */}
+      {upcomingBookingNotification && (
+        <div className="fixed top-4 right-4 z-50 bg-blue-500 text-white p-4 rounded-lg shadow-lg max-w-md animate-slide-in">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <FaCalendarAlt className="h-6 w-6" />
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium">
+                Upcoming Booking in{' '}
+                {Math.max(
+                  0,
+                  Math.round(
+                    (new Date(Number(upcomingBookingNotification.reservationDate)).getTime() -
+                      new Date().getTime()) /
+                      60000
+                  )
+                )}{' '}
+                minutes!
+              </h3>
+              <div className="mt-2 text-sm">
+                <p>Table {upcomingBookingNotification.table?.number || 'N/A'}</p>
+                <p>Customer: {upcomingBookingNotification.customerName}</p>
+                <p>Time: {upcomingBookingNotification.startSlot.startTime}</p>
+                <p>Guests: {upcomingBookingNotification.peopleCount}</p>
+              </div>
+              <button
+                onClick={() => setUpcomingBookingNotification(null)}
+                className="mt-2 bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-md text-sm"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8">
@@ -429,6 +520,17 @@ const Tables: React.FC = () => {
             >
               <FaTable className="mr-2" />
               Current Tables
+            </button>
+            <button
+              onClick={() => setActiveTab('booking')}
+              className={`flex items-center py-4 px-4 border-b-2 font-medium text-sm ${
+                activeTab === 'booking'
+                  ? 'border-blue-500 text-blue-600 cursor-pointer'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 cursor-pointer'
+              }`}
+            >
+              <FaCalendarAlt className="mr-2" />
+              Bookings
             </button>
             <button
               onClick={() => setActiveTab('history')}
@@ -518,8 +620,10 @@ const Tables: React.FC = () => {
               </div>
             ))}
           </>
-        ) : (
+        ) : activeTab === 'history' ? (
           <TableHistory tablesData={tables} />
+        ) : (
+          <TableBooking />
         )}
 
         {/* People Count Modal */}

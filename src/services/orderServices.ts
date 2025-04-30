@@ -6,6 +6,7 @@ export const GET_ORDERS = gql`
       id
       status
       createdAt
+      createdBy
       orderItems {
         id
         quantity
@@ -23,12 +24,13 @@ export const GET_ORDERS = gql`
 `;
 
 export const CREATE_ORDER = gql`
-  mutation CreateOrder($bookingId: Int!, $orderItems: [OrderItemInput!]!) {
-    createOrder(bookingId: $bookingId, orderItems: $orderItems) {
+  mutation CreateOrder($bookingId: Int!, $orderItems: [OrderItemInput!]!, $createdBy: String!) {
+    createOrder(bookingId: $bookingId, orderItems: $orderItems, createdBy: $createdBy) {
       id
       status
       total
       createdAt
+      createdBy
       orderItems {
         id
         quantity
