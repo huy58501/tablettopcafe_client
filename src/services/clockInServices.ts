@@ -5,12 +5,16 @@ export const GET_ALL_CLOCK_INS = gql`
     allClockIns {
       id
       userId
-      notes
-      status
       clockIn
       clockOut
+      notes
+      status
       moneyIn
       moneyOut
+      user {
+        id
+        username
+      }
     }
   }
 `;

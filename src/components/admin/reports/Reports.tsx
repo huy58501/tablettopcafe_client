@@ -109,6 +109,16 @@ const Reports = () => {
     employeeLoading;
 
   useEffect(() => {
+    console.log('ordersData', ordersData);
+    console.log('bookingsData', bookingsData);
+    console.log('tablesData', tablesData);
+    console.log('clockInData', clockInData);
+    console.log('allReportData', allReportData);
+    console.log('userData', userData);
+    console.log('employeeData', employeeData);
+  }, [ordersData, bookingsData, tablesData, clockInData, allReportData, userData, employeeData]);
+
+  useEffect(() => {
     if (
       ordersData?.allOrders &&
       bookingsData?.allBooking &&
@@ -293,367 +303,113 @@ const Reports = () => {
     <div className="min-h-screen bg-gray-50 p-4 md:p-6 space-y-6">
       {/* Header Section */}
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-lg p-4 sm:p-6 text-white">
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-bold mb-1 sm:mb-2">Reports Dashboard</h2>
-            <p className="text-indigo-100 text-sm sm:text-base">Track your business performance</p>
-          </div>
-          <div className="flex flex-row gap-2 bg-white/10 p-4 rounded-lg backdrop-blur-sm">
-            <div className="flex items-center gap-2">
-              <label className="text-xs sm:text-sm text-indigo-100">From:</label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={e => setStartDate(e.target.value)}
-                className="bg-white/20 border border-white/30 rounded-md px-2 py-1 sm:px-3 sm:py-2 text-white focus:outline-none focus:ring-2 focus:ring-white/50 text-xs sm:text-sm"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-xs sm:text-sm text-indigo-100">To:</label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={e => setEndDate(e.target.value)}
-                className="bg-white/20 border border-white/30 rounded-md px-2 py-1 sm:px-3 sm:py-2 text-white focus:outline-none focus:ring-2 focus:ring-white/50 text-xs sm:text-sm"
-              />
-            </div>
-          </div>
-        </div>
+        <h2 className="text-xl sm:text-2xl font-bold">Reports Dashboard</h2>
+        <p className="text-indigo-100 text-sm sm:text-base">Current Status Overview</p>
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 sm:gap-4 mb-2 sm:mb-4">
-        <div className="bg-white rounded-xl shadow-lg p-3 sm:p-6 transform hover:scale-105 transition-transform duration-200 border-l-4 border-indigo-500 flex flex-col justify-between min-h-[90px]">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-indigo-500">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Total Revenue</p>
+              <p className="text-sm font-medium text-gray-500">Total Tables</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
-                {formatAmount(analytics.totalRevenue)}
+                {tablesData?.allTable?.length || 0}
               </p>
-            </div>
-            <div className="bg-indigo-100 p-2 sm:p-3 rounded-full flex items-center justify-center">
-              <svg
-                className="w-4 h-4 text-indigo-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-xl shadow-lg p-3 sm:p-6 transform hover:scale-105 transition-transform duration-200 border-l-4 border-blue-500 flex flex-col justify-between min-h-[90px]">
+        <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Total Reported</p>
+              <p className="text-sm font-medium text-gray-500">Available Tables</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
-                {formatAmount(analytics.totalReported)}
+                {tablesData?.allTable?.filter((t: any) => t.status === 'available').length || 0}
               </p>
-            </div>
-            <div className="bg-blue-100 p-2 sm:p-3 rounded-full flex items-center justify-center">
-              <svg
-                className="w-4 h-4 text-indigo-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-xl shadow-lg p-3 sm:p-6 transform hover:scale-105 transition-transform duration-200 border-l-4 border-green-500 flex flex-col justify-between min-h-[90px]">
+        <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-red-500">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Total Orders</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{analytics.totalOrders}</p>
-            </div>
-            <div className="bg-green-100 p-2 sm:p-3 rounded-full flex items-center justify-center">
-              <svg
-                className="w-4 h-4 text-green-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                />
-              </svg>
+              <p className="text-sm font-medium text-gray-500">Occupied Tables</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">
+                {tablesData?.allTable?.filter((t: any) => t.status === 'occupied').length || 0}
+              </p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-xl shadow-lg p-3 sm:p-6 transform hover:scale-105 transition-transform duration-200 border-l-4 border-purple-500 flex flex-col justify-between min-h-[90px]">
+        <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-yellow-500">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Active Tables</p>
+              <p className="text-sm font-medium text-gray-500">Pending Orders</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
-                {tablesData?.allTable.filter((table: any) => table.status === 'occupied').length ||
-                  0}
+                {ordersData?.allOrders?.filter((o: any) => o.status === 'PENDING').length || 0}
               </p>
-            </div>
-            <div className="bg-purple-100 p-2 sm:p-3 rounded-full flex items-center justify-center">
-              <svg
-                className="w-4 h-4 text-purple-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                />
-              </svg>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Report Data Section */}
-      <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 overflow-x-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-gray-800">Report Summary</h3>
-          <div className="bg-indigo-100 text-indigo-600 px-3 py-1 rounded-full text-sm font-medium">
-            Financial Overview
-          </div>
-        </div>
+      {/* Orders Section */}
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">Current Orders</h3>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Date
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Order #
                 </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Money In
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Items
                 </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Money Out
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Total
                 </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Total Orders
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Total Sales
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {analytics.reportData.map((report, index) => (
-                <tr key={index} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {format(new Date(report.date), 'MMM dd, yyyy')}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {formatAmount(report.moneyIn)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {formatAmount(report.moneyOut)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {report.totalOrder}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {formatAmount(report.totalSale)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Clock-in Section */}
-      <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 overflow-x-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-gray-800">Staff Clock-in</h3>
-          <div className="bg-green-100 text-green-600 px-3 py-1 rounded-full text-sm font-medium">
-            Today's Attendance
-          </div>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  User
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Clock In
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Clock Out
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   Status
                 </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Money In
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Money Out
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Payment
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {analytics.clockInData.map((clockIn, index) => {
-                // Try to find the employee by userId
-                const employee = analytics.employeeData.find(
-                  emp => emp.user?.id === clockIn.userId
-                );
-                // Try to find the user by userId if employee not found
-                const user = employee
-                  ? employee.user
-                  : userData?.allUser?.find((u: any) => u.id === clockIn.userId) || null;
-                const displayName = employee?.fullName || user?.username || clockIn.userId;
-                return (
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {displayName}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {format(new Date(clockIn.clockIn), 'MMM dd, yyyy HH:mm')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {clockIn.clockOut
-                        ? format(new Date(clockIn.clockOut), 'MMM dd, yyyy HH:mm')
-                        : '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {clockIn.status}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatAmount(clockIn.moneyIn)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatAmount(clockIn.moneyOut)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Employee Section */}
-      <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 overflow-x-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-gray-800">Employee Information</h3>
-          <div className="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm font-medium">
-            Staff Details
-          </div>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Name
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Position
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Email
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Phone
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Username
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Role
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {analytics.employeeData.map((employee, index) => (
-                <tr key={index} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {employee.fullName}
+            <tbody className="divide-y divide-gray-200">
+              {ordersData?.allOrders?.map((order: any) => (
+                <tr key={order.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">#{order.id}</td>
+                  <td className="px-6 py-4">
+                    <div className="space-y-1">
+                      {order.orderItems.map((item: any) => (
+                        <div key={item.id} className="text-sm">
+                          <span className="font-medium">{item.quantity}x</span> {item.dish.name}
+                        </div>
+                      ))}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {employee.position}
+                    {formatAmount(order.total)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {employee.email || '-'}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`px-2 py-1 text-xs rounded-full font-medium
+                      ${order.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}
+                    >
+                      {order.status}
+                    </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {employee.phone || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {employee.user?.username || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {employee.user?.role || '-'}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`px-2 py-1 text-xs rounded-full font-medium
+                      ${
+                        order.payment === 'paid' || order.payment === 'Tiền Mặt'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}
+                    >
+                      {order.payment === 'Tiền Mặt' ? 'Paid (Cash)' : order.payment || 'Unpaid'}
+                    </span>
                   </td>
                 </tr>
               ))}
@@ -662,133 +418,265 @@ const Reports = () => {
         </div>
       </div>
 
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-        {/* Top Employees by Orders Handled */}
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-800">Top Employees by Orders Handled</h3>
-            <div className="bg-indigo-100 text-indigo-600 px-3 py-1 rounded-full text-sm font-medium">
-              Staff Performance
+      {/* Tables Status */}
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">Tables Status</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          {tablesData?.allTable?.map((table: any) => (
+            <div
+              key={table.id}
+              className={`p-4 rounded-lg border ${
+                table.status === 'occupied'
+                  ? 'bg-red-50 border-red-200'
+                  : 'bg-green-50 border-green-200'
+              }`}
+            >
+              <div className="text-sm font-medium">{table.number}</div>
+              <div className="text-xs text-gray-500">Room: {table.room}</div>
+              <div className="text-xs text-gray-500">Capacity: {table.capacity}</div>
+              <div
+                className={`mt-2 text-xs font-medium ${
+                  table.status === 'occupied' ? 'text-red-600' : 'text-green-600'
+                }`}
+              >
+                {table.status.charAt(0).toUpperCase() + table.status.slice(1)}
+              </div>
             </div>
-          </div>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={analytics.topEmployees || []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="name" stroke="#6B7280" />
-                <YAxis stroke="#6B7280" allowDecimals={false} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'white',
-                    border: 'none',
-                    borderRadius: '0.5rem',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                  }}
-                />
-                <Bar dataKey="count" fill="#4F46E5" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-        {/* Hourly Sales Distribution */}
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-800">Hourly Sales Distribution</h3>
-            <div className="bg-green-100 text-green-600 px-3 py-1 rounded-full text-sm font-medium">
-              Peak Hours
-            </div>
-          </div>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={analytics.hourlySalesArray || []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="hour" stroke="#6B7280" />
-                <YAxis stroke="#6B7280" />
-                <Tooltip
-                  formatter={(value: number) => formatAmount(value)}
-                  contentStyle={{
-                    backgroundColor: 'white',
-                    border: 'none',
-                    borderRadius: '0.5rem',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                  }}
-                />
-                <Bar dataKey="total" fill="#22C55E" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          ))}
         </div>
       </div>
 
-      {/* Popular Items and Booking Distribution */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-        {/* Popular Items */}
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-800">Popular Items</h3>
-            <div className="bg-yellow-100 text-yellow-600 px-3 py-1 rounded-full text-sm font-medium">
-              Top 5
-            </div>
-          </div>
-          <div className="space-y-4">
-            {analytics.popularItems.map((item, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-semibold">
-                    {index + 1}
-                  </div>
-                  <span className="text-gray-700 font-medium">{item.name}</span>
-                </div>
-                <span className="font-semibold text-gray-900 bg-white px-3 py-1 rounded-full shadow-sm">
-                  {item.count} orders
-                </span>
-              </div>
-            ))}
+      {/* Current Bookings */}
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">Current Bookings</h3>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Table
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Customer
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Time
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  People
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Type
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Status
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {bookingsData?.allBooking?.map((booking: any) => (
+                <tr key={booking.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium">{booking.table.number}</div>
+                    <div className="text-xs text-gray-500">{booking.table.room}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm">{booking.customerName}</div>
+                    <div className="text-xs text-gray-500">{booking.phoneNumber}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    {booking.startSlot.startTime} - {booking.startSlot.endTime}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">{booking.peopleCount}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="px-2 py-1 text-xs rounded-full font-medium bg-blue-100 text-blue-800">
+                      {booking.bookingType}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`px-2 py-1 text-xs rounded-full font-medium ${
+                        booking.status === 'Confirmed'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}
+                    >
+                      {booking.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* End of Day Report */}
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold text-gray-800">End of Day Report</h3>
+          <div className="flex space-x-2">
+            <input
+              type="date"
+              value={startDate}
+              onChange={e => setStartDate(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+            />
+            <button
+              className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm hover:bg-indigo-700"
+              onClick={() => {
+                // This would typically trigger a report generation
+                console.log('Generating report for', startDate);
+              }}
+            >
+              Generate Report
+            </button>
           </div>
         </div>
 
-        {/* Booking Distribution */}
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-800">Booking Distribution</h3>
-            <div className="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm font-medium">
-              Type Analysis
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Financial Summary */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h4 className="text-md font-medium text-gray-700 mb-3">Financial Summary</h4>
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Total Revenue:</span>
+                <span className="text-sm font-medium">{formatAmount(analytics.totalRevenue)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Total Orders:</span>
+                <span className="text-sm font-medium">{analytics.totalOrders}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Average Order Value:</span>
+                <span className="text-sm font-medium">
+                  {analytics.totalOrders > 0
+                    ? formatAmount(analytics.totalRevenue / analytics.totalOrders)
+                    : formatAmount(0)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Cash Payments:</span>
+                <span className="text-sm font-medium">
+                  {formatAmount(
+                    ordersData?.allOrders
+                      ?.filter((o: any) => o.payment === 'Tiền Mặt')
+                      ?.reduce((sum: number, o: any) => sum + o.total, 0) || 0
+                  )}
+                </span>
+              </div>
             </div>
           </div>
-          <div className="h-80">
+
+          {/* Order Summary */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h4 className="text-md font-medium text-gray-700 mb-3">Order Summary</h4>
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Paid Orders:</span>
+                <span className="text-sm font-medium">
+                  {ordersData?.allOrders?.filter((o: any) => o.status === 'paid').length || 0}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Pending Orders:</span>
+                <span className="text-sm font-medium">
+                  {ordersData?.allOrders?.filter((o: any) => o.status === 'PENDING').length || 0}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Total Bookings:</span>
+                <span className="text-sm font-medium">{bookingsData?.allBooking?.length || 0}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Confirmed Bookings:</span>
+                <span className="text-sm font-medium">
+                  {bookingsData?.allBooking?.filter((b: any) => b.status === 'Confirmed').length ||
+                    0}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Popular Items */}
+        <div className="mt-6">
+          <h4 className="text-md font-medium text-gray-700 mb-3">Top Selling Items</h4>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Item
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Quantity Sold
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {analytics.popularItems.map((item, index) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {item.name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {item.count}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Hourly Sales Chart */}
+        <div className="mt-6">
+          <h4 className="text-md font-medium text-gray-700 mb-3">Hourly Sales Distribution</h4>
+          <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={Object.entries(analytics.bookingDistribution).map(([type, count]) => ({
-                    name: type,
-                    value: count,
-                  }))}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                >
-                  {Object.entries(analytics.bookingDistribution).map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'white',
-                    border: 'none',
-                    borderRadius: '0.5rem',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                  }}
-                />
-              </PieChart>
+              <BarChart
+                data={analytics.hourlySalesArray}
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="hour" />
+                <YAxis />
+                <Tooltip formatter={value => formatAmount(Number(value))} />
+                <Bar dataKey="total" fill="#8884d8" name="Sales" />
+              </BarChart>
             </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Employee Performance */}
+        <div className="mt-6">
+          <h4 className="text-md font-medium text-gray-700 mb-3">Employee Performance</h4>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Employee
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Orders Handled
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {analytics.topEmployees.map((employee, index) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {employee.name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {employee.count}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

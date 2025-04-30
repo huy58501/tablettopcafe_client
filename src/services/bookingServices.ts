@@ -6,17 +6,29 @@ export const GET_ALL_BOOKINGS = gql`
       id
       customerName
       phoneNumber
-      bookingType
-      peopleCount
-      reservationDate
-      durationSlots
-      startSlot {
-        startTime
-      }
       customerEmail
       customerNote
       status
-      tableId
+      reservationDate
+      durationSlots
+      peopleCount
+      bookingType
+      createdAt
+      table {
+        id
+        number
+        room
+      }
+      startSlot {
+        id
+        startTime
+        endTime
+      }
+      order {
+        id
+        status
+        total
+      }
     }
   }
 `;

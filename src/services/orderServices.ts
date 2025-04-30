@@ -1,12 +1,17 @@
 import { gql } from '@apollo/client';
 
 export const GET_ORDERS = gql`
-  query allOrders {
+  query GetOrders {
     allOrders {
       id
+      bookingId
       status
-      createdAt
+      total
+      payment
+      reference
       createdBy
+      createdAt
+      closedAt
       orderItems {
         id
         quantity
@@ -15,10 +20,9 @@ export const GET_ORDERS = gql`
         dish {
           id
           name
+          price
         }
       }
-      total
-      bookingId
     }
   }
 `;
