@@ -118,8 +118,10 @@ const Sidebar: React.FC<NavbarProps> = ({ title, menuItems }) => {
               </div>
               <span className="text-lg font-semibold text-white">{title}</span>
             </div>
-            {/* Menu Items */}
-            <SidebarContent />
+            {/* Scrollable Menu Items */}
+            <div className="flex-1 overflow-y-auto -webkit-overflow-scrolling-touch">
+              <SidebarContent />
+            </div>
             {/* Divider */}
             <div className="my-4 border-t border-slate-700/60" />
             {/* Logout at the bottom */}

@@ -12,7 +12,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, parseISO } from 'd
 import { FaFileExcel, FaFilePdf, FaCalendar, FaChartLine } from 'react-icons/fa';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 const formatVND = (amount: number) => {
   return new Intl.NumberFormat('vi-VN', {
@@ -273,27 +273,80 @@ const Reports = () => {
   const handleExportPDF = () => {
     const doc = new jsPDF();
 
-    // Add title
-    doc.setFontSize(18);
-    doc.text('Sales Report', 14, 20);
-    doc.setFontSize(12);
+    // Add header
+    doc.setFillColor(41, 128, 185);
+    doc.rect(0, 0, doc.internal.pageSize.width, 40, 'F');
+
+    // Title
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(24);
+    doc.text('Sales Report', 14, 25);
+
+    // Reset text color for rest of the document
+    doc.setTextColor(0, 0, 0);
+
+    // Add date range
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
     doc.text(
-      `${format(dateRange.startDate, 'dd/MM/yyyy')} - ${format(dateRange.endDate, 'dd/MM/yyyy')}`,
+      `Date Range: ${format(dateRange.startDate, 'dd/MM/yyyy')} - ${format(
+        dateRange.endDate,
+        'dd/MM/yyyy'
+      )}`,
       14,
-      30
+      50
     );
 
-    // Add summary
-    doc.setFontSize(14);
-    doc.text('Summary', 14, 45);
-    doc.setFontSize(10);
-    doc.text(`Total Revenue: ${formatVND(summary.totalRevenue)}`, 14, 55);
-    doc.text(`Total Orders: ${summary.totalOrders}`, 14, 62);
-    doc.text(`Average Order Value: ${formatVND(summary.averageOrderValue)}`, 14, 69);
+    // Summary section with a light background
+    doc.setFillColor(240, 240, 240);
+    doc.rect(10, 60, 190, 45, 'F');
 
-    // Add top selling items table
+    doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
-    doc.text('Top Selling Items', 14, 85);
+    doc.text('Summary', 14, 70);
+
+    // Summary details
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.text(`Total Revenue:`, 14, 80);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`${formatVND(summary.totalRevenue)}`, 70, 80);
+
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Total Orders:`, 14, 90);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`${summary.totalOrders}`, 70, 90);
+
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Average Order Value:`, 14, 100);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`${formatVND(summary.averageOrderValue)}`, 70, 100);
+
+    // Payment Methods section
+    doc.setFillColor(240, 240, 240);
+    doc.rect(10, 115, 190, 35, 'F');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text('Payment Methods', 14, 125);
+
+    // Payment details
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.text(`Cash:`, 14, 135);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`${formatVND(paymentSummary.cash)}`, 70, 135);
+
+    doc.setFont('helvetica', 'normal');
+    doc.text(`QR:`, 14, 145);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`${formatVND(paymentSummary.qr)}`, 70, 145);
+
+    // Top Selling Items Table
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text('Top Selling Items', 14, 165);
 
     const itemsTableData = topSellingItems.map(item => [
       item.name,
@@ -301,15 +354,48 @@ const Reports = () => {
       formatVND(item.revenue),
     ]);
 
-    (doc as any).autoTable({
-      startY: 90,
+    autoTable(doc, {
+      startY: 170,
       head: [['Item Name', 'Quantity', 'Revenue']],
       body: itemsTableData,
-      margin: { top: 90 },
+      theme: 'grid',
+      headStyles: {
+        fillColor: [41, 128, 185],
+        textColor: 255,
+        fontStyle: 'bold',
+        halign: 'center',
+      },
+      columnStyles: {
+        0: { cellWidth: 85 },
+        1: { cellWidth: 40, halign: 'center' },
+        2: { cellWidth: 50, halign: 'right' },
+      },
+      alternateRowStyles: {
+        fillColor: [245, 245, 245],
+      },
+      margin: { left: 10, right: 10 },
+      styles: {
+        fontSize: 10,
+        cellPadding: 5,
+      },
     });
 
-    // Save the PDF
-    doc.save(`sales_report_${format(dateRange.startDate, 'yyyy-MM-dd')}.pdf`);
+    // Add footer
+    const pageCount = doc.internal.pages.length;
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.text(
+        `Generated on ${format(new Date(), 'dd/MM/yyyy HH:mm')} - Page ${i} of ${pageCount}`,
+        doc.internal.pageSize.width / 2,
+        doc.internal.pageSize.height - 10,
+        { align: 'center' }
+      );
+    }
+
+    // Save with formatted date in filename
+    doc.save(`sales_report_${format(new Date(), 'yyyy-MM-dd_HHmm')}.pdf`);
   };
 
   if (isLoading) {
