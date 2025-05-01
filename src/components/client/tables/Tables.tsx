@@ -87,6 +87,7 @@ const Tables: React.FC = () => {
   const { handleUpdateStatus } = useReservations();
   const [isTableChangeLoading, setIsTableChangeLoading] = useState(false);
   const { upcomingBookingNotification, setUpcomingBookingNotification } = useBookingNotifications();
+  const [orderLoading, setOrderLoading] = useState(false);
 
   // Format currency to VND with thousands separators
   const formatCurrency = (amount: number) => {
@@ -95,27 +96,36 @@ const Tables: React.FC = () => {
 
   useEffect(() => {
     if (tablesData) {
+      setOrderLoading(true);
       const mappedTables = tablesData.allTable
-        .map((table: Table) => ({
-          ...table,
-          orders:
-            table.status === 'occupied' &&
-            table.bookings?.length > 0 &&
-            table.bookings[table.bookings.length - 1]?.order
-              ? table.bookings[table.bookings.length - 1].order
+        .map((table: Table) => {
+          // Find the latest pending order
+          const pendingBooking = table.bookings?.find(
+            booking => booking.order?.status === 'PENDING'
+          );
+
+          // Get the latest order (pending or paid)
+          const latestBooking = pendingBooking || table.bookings?.[table.bookings.length - 1];
+
+          // A table is occupied if it has a pending order or its status is 'occupied'
+          const effectiveStatus = pendingBooking ? 'occupied' : table.status;
+
+          return {
+            ...table,
+            status: effectiveStatus,
+            orders: latestBooking?.order
+              ? ({
+                  ...latestBooking.order,
+                  orderItems: latestBooking.order.orderItems || [],
+                } as ExtendedOrder)
               : null,
-        }))
-        .sort((a: TableWithOrders, b: TableWithOrders) => a.id - b.id); // Sort all tables by ID
+          };
+        })
+        .sort((a: TableWithOrders, b: TableWithOrders) => a.id - b.id);
 
       setTables(mappedTables);
-      setTotalBill(
-        mappedTables.reduce(
-          (acc: number, table: TableWithOrders) => acc + (table.orders?.total || 0),
-          0
-        )
-      );
 
-      // Group tables by room but maintain ID order
+      // Group tables by room
       const groupedTables: TablesByRoom = {};
       mappedTables.forEach((table: TableWithOrders) => {
         const room = table.room || 'Main Area';
@@ -126,6 +136,7 @@ const Tables: React.FC = () => {
       });
 
       setTablesByRoom(groupedTables);
+      setOrderLoading(false);
     }
   }, [tablesData]);
 
@@ -135,9 +146,20 @@ const Tables: React.FC = () => {
     if (table.status === 'available') {
       // If table is available, open the people count modal first
       setIsPeopleCountModalOpen(true);
-    } else if (table.status === 'occupied' && table.orders) {
-      // If table is occupied, show the order details
-      setIsOrderDetailsOpen(true);
+    } else if (table.status === 'occupied') {
+      if (table.orders) {
+        // If table is occupied and has orders, show the order details
+        setIsOrderDetailsOpen(true);
+      } else {
+        // If table is occupied but has no orders, treat it as available
+        handleUpdateTableStatus(table.id, 'available')
+          .then(() => {
+            setIsPeopleCountModalOpen(true);
+          })
+          .catch(error => {
+            console.error('Error updating table status:', error);
+          });
+      }
     }
   };
 
@@ -427,26 +449,13 @@ const Tables: React.FC = () => {
   return (
     <div className="p-4 md:p-6 bg-gray-50 min-h-screen ">
       {/* Loading Spinner */}
-      <SpinningModal
-        isOpen={tablesLoading}
-        message="Loading tables..."
-        size="medium"
-        color="blue"
-      />
+      <SpinningModal isOpen={tablesLoading} message="Loading tables..." />
 
-      <SpinningModal
-        isOpen={isPaymentLoading}
-        message="Processing payment..."
-        size="medium"
-        color="blue"
-      />
+      <SpinningModal isOpen={isPaymentLoading} message="Processing payment..." />
 
-      <SpinningModal
-        isOpen={isTableChangeLoading}
-        message="Changing table..."
-        size="medium"
-        color="blue"
-      />
+      <SpinningModal isOpen={isTableChangeLoading} message="Changing table..." />
+
+      <SpinningModal isOpen={orderLoading} message="Loading orders..." />
 
       {/* Upcoming Booking Notification */}
       {upcomingBookingNotification && (

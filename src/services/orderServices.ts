@@ -68,3 +68,22 @@ export const UPDATE_ORDER_PAYMENT = gql`
     }
   }
 `;
+
+export const UPDATE_ORDER = gql`
+  mutation updateOrder($id: Int!, $orderItems: [OrderItemInput!]!) {
+    updateOrder(id: $id, orderItems: $orderItems) {
+      id
+      orderItems {
+        id
+        quantity
+        price
+        notes
+        dish {
+          id
+          name
+          price
+        }
+      }
+    }
+  }
+`;

@@ -32,6 +32,8 @@
     "graphql": "^16.10.0",
     "js-cookie": "^3.0.5",
     "jsonwebtoken": "^9.0.2",
+    "jspdf": "^3.0.1",
+    "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.501.0",
     "next": "15.3.0",
     "qrcode.react": "^4.2.0",
@@ -42,7 +44,8 @@
     "recharts": "^2.15.3",
     "sass": "^1.87.0",
     "sonner": "^2.0.3",
-    "tailwind-merge": "^3.2.0"
+    "tailwind-merge": "^3.2.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@cypress/react": "^9.0.1",

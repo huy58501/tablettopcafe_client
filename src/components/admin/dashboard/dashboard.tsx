@@ -8,69 +8,60 @@ import { GET_ALL_TABLES } from '../../../services/tableServices';
 import { GET_ALL_CLOCK_INS } from '../../../services/clockInServices';
 import { GET_ALL_USERS_WITH_EMPLOYMENT } from '../../../services/reportServices';
 import SpinningModal from '@/components/UI/SpinningModal';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
-} from 'recharts';
-import { format } from 'date-fns';
+import { format, differenceInHours, differenceInMinutes, startOfToday } from 'date-fns';
+import { FaUsers, FaChair, FaMoneyBillWave, FaUtensils } from 'react-icons/fa';
 
-interface ClockIn {
-  id: string;
-  userId: string;
-  notes: string;
-  status: 'active' | 'inactive';
-  clockIn: string;
-  clockOut: string | null;
-}
+const formatVND = (amount: number) => {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
 
-interface Booking {
+const formatTime = (dateString: string | null) => {
+  if (!dateString) return 'Still working';
+  return format(new Date(dateString), 'HH:mm');
+};
+
+const formatDate = (timestamp: string) => {
+  return format(new Date(Number(timestamp)), 'dd/MM/yyyy');
+};
+
+const calculateHoursWorked = (clockIn: string, clockOut: string | null) => {
+  const start = new Date(clockIn);
+  const end = clockOut ? new Date(clockOut) : new Date();
+
+  const totalMinutes = differenceInMinutes(end, start);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  return `${hours}h ${minutes}m`;
+};
+
+const calculateTableTotal = (bookings: any[]) => {
+  if (!bookings || bookings.length === 0) return 0;
+  // Get the latest booking
+  const latestBooking = bookings[bookings.length - 1];
+  return latestBooking.order ? latestBooking.order.total : 0;
+};
+
+const getPaymentStatus = (bookings: any[]) => {
+  if (!bookings || bookings.length === 0) return 'paid';
+  // Get the latest booking
+  const latestBooking = bookings[bookings.length - 1];
+  return latestBooking.order && latestBooking.order.status !== 'paid' ? 'unpaid' : 'paid';
+};
+
+interface PopularItem {
   id: number;
-  bookingType: string;
-  customerName: string;
-  phoneNumber: string;
-  status: string;
-}
-
-interface DashboardMetrics {
-  totalRevenue: number;
-  totalDineIn: number;
-  totalOnlineBookings: number;
-  activeClockIns: number;
-  revenueByDay: { [key: string]: number };
-  orderStatusDistribution: { [key: string]: number };
-  bookingDistribution: { [key: string]: number };
-  clockInsByHour: { [key: string]: number };
-  tablesWithOrders?: any[];
-  tablesWithBookings?: any[];
-  usersClockedInToday?: any[];
+  name: string;
+  quantity: number;
+  revenue: number;
 }
 
 const Dashboard = () => {
-  const [metrics, setMetrics] = useState<DashboardMetrics>({
-    totalRevenue: 0,
-    totalDineIn: 0,
-    totalOnlineBookings: 0,
-    activeClockIns: 0,
-    revenueByDay: {},
-    orderStatusDistribution: {},
-    bookingDistribution: {},
-    clockInsByHour: {},
-    tablesWithOrders: [],
-    tablesWithBookings: [],
-    usersClockedInToday: [],
-  });
-
   const { loading: ordersLoading, data: ordersData } = useQuery(GET_ORDERS);
   const { loading: bookingsLoading, data: bookingsData } = useQuery(GET_ALL_BOOKINGS);
   const { loading: tablesLoading, data: tablesData } = useQuery(GET_ALL_TABLES);
@@ -80,415 +71,364 @@ const Dashboard = () => {
   const isLoading =
     ordersLoading || bookingsLoading || tablesLoading || clockInsLoading || userLoading;
 
-  useEffect(() => {
-    if (
-      ordersData?.allOrders &&
-      bookingsData?.allBooking &&
-      tablesData?.allTable &&
-      userData?.allUser
-    ) {
-      const orders = ordersData.allOrders;
-      const bookings = bookingsData.allBooking;
-      const tables = tablesData.allTable;
+  const [paymentTotals, setPaymentTotals] = useState({
+    today: 0,
+    week: 0,
+    month: 0,
+  });
 
-      // Calculate total revenue from all orders
-      const totalRevenue = orders.reduce((sum: number, order: any) => {
-        return sum + (order.total || 0);
+  const [todayClockIns, setTodayClockIns] = useState<any[]>([]);
+  const [onlineBookings, setOnlineBookings] = useState<any[]>([]);
+  const [dashboardStats, setDashboardStats] = useState({
+    totalCustomers: 0,
+    occupiedTables: 0,
+    availableTables: 0,
+    popularItems: [] as PopularItem[],
+  });
+
+  useEffect(() => {
+    if (ordersData?.allOrders) {
+      const today = startOfToday();
+
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+
+      const monthAgo = new Date();
+      monthAgo.setMonth(monthAgo.getMonth() - 1);
+
+      const totals = ordersData.allOrders.reduce(
+        (acc: any, order: any) => {
+          const orderDate = new Date(order.createdAt);
+
+          if (orderDate >= today) {
+            acc.today += order.total;
+          }
+          if (orderDate >= weekAgo) {
+            acc.week += order.total;
+          }
+          if (orderDate >= monthAgo) {
+            acc.month += order.total;
+          }
+
+          return acc;
+        },
+        { today: 0, week: 0, month: 0 }
+      );
+
+      setPaymentTotals(totals);
+
+      // Calculate popular items
+      const itemMap = new Map<number, PopularItem>();
+      ordersData.allOrders.forEach((order: any) => {
+        order.orderItems.forEach((item: any) => {
+          if (!itemMap.has(item.dish.id)) {
+            itemMap.set(item.dish.id, {
+              id: item.dish.id,
+              name: item.dish.name,
+              quantity: 0,
+              revenue: 0,
+            });
+          }
+          const currentItem = itemMap.get(item.dish.id)!;
+          currentItem.quantity += item.quantity;
+          currentItem.revenue += item.price * item.quantity;
+        });
+      });
+
+      const popularItems = Array.from(itemMap.values())
+        .sort((a, b) => b.quantity - a.quantity)
+        .slice(0, 5);
+
+      setDashboardStats(prev => ({
+        ...prev,
+        popularItems,
+      }));
+    }
+  }, [ordersData]);
+
+  useEffect(() => {
+    if (tablesData?.allTable) {
+      const occupiedTables = tablesData.allTable.filter(
+        (table: any) => table.status === 'occupied'
+      ).length;
+      const totalCustomers = tablesData.allTable.reduce((acc: number, table: any) => {
+        return acc + (table.bookings?.length || 0);
       }, 0);
 
-      // Calculate total dine-in orders and online bookings
-      const totalDineIn = bookings.filter(
-        (booking: Booking) => booking.bookingType === 'dine-in'
-      ).length;
-      const totalOnlineBookings = bookings.filter(
-        (booking: Booking) => booking.bookingType === 'online'
-      ).length;
-      // Calculate order status distribution
-      const orderStatusDistribution: { [key: string]: number } = {};
-      orders.forEach((order: any) => {
-        const status = order.status || 'unknown';
-        orderStatusDistribution[status] = (orderStatusDistribution[status] || 0) + 1;
-      });
-
-      // Get tables with orders (occupied tables)
-      const tablesWithOrders = tables.filter((table: any) => table.status === 'occupied');
-
-      // Get tables with bookings
-      const tablesWithBookings = tables
-        .map((table: any) => ({
-          ...table,
-          todaysBookings: bookings.filter((b: any) => b.id === table.bookingId) || [],
-        }))
-        .filter((table: any) => table.todaysBookings.length > 0);
-
-      setMetrics({
-        totalRevenue,
-        totalDineIn,
-        totalOnlineBookings,
-        activeClockIns: 0,
-        revenueByDay: {},
-        orderStatusDistribution,
-        bookingDistribution: {},
-        clockInsByHour: {},
-        tablesWithOrders,
-        tablesWithBookings,
-        usersClockedInToday: [],
-      });
+      setDashboardStats(prev => ({
+        ...prev,
+        totalCustomers,
+        occupiedTables,
+        availableTables: tablesData.allTable.length - occupiedTables,
+      }));
     }
-  }, [ordersData, bookingsData, tablesData, userData]);
+  }, [tablesData]);
 
-  const formatAmount = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
+  useEffect(() => {
+    if (clockInsData?.allClockIns) {
+      const today = startOfToday();
 
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+      const todayClockIns = clockInsData.allClockIns.filter((clockIn: any) => {
+        const clockInDate = new Date(clockIn.clockIn);
+        return clockInDate >= today;
+      });
+
+      setTodayClockIns(todayClockIns);
+    }
+  }, [clockInsData]);
+
+  useEffect(() => {
+    if (bookingsData?.allBooking) {
+      const onlineBookings = bookingsData.allBooking.filter(
+        (booking: any) => booking.bookingType === 'online'
+      );
+      setOnlineBookings(onlineBookings);
+    }
+  }, [bookingsData]);
+
+  if (isLoading) {
+    return <SpinningModal isOpen={true} message="Loading dashboard data..." />;
+  }
 
   return (
-    <div className="bg-gray-50 min-h-screen p-4 space-y-6">
-      <SpinningModal isOpen={isLoading} message="Loading dashboard data..." />
-
-      {/* Header Section */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">Dashboard Overview</h1>
-        <p className="text-gray-500">Real-time business metrics and operations</p>
-      </div>
-
-      {/* Metrics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-sm p-6 text-white">
+    <div className="p-4 md:p-6 space-y-6">
+      {/* Quick Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-white p-4 md:p-6 rounded-lg shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-blue-100 text-sm">Total Revenue</p>
-              <p className="text-3xl font-bold mt-1">{formatAmount(metrics.totalRevenue)}</p>
+              <p className="text-sm text-gray-500">Total Customers</p>
+              <p className="text-xl font-bold text-gray-800">{dashboardStats.totalCustomers}</p>
             </div>
-            <div className="bg-blue-400 bg-opacity-30 p-3 rounded-full">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
+            <FaUsers className="text-blue-500 text-2xl" />
           </div>
         </div>
-
-        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-sm p-6 text-white">
+        <div className="bg-white p-4 md:p-6 rounded-lg shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-green-100 text-sm">Dine-in Orders</p>
-              <p className="text-3xl font-bold mt-1">{metrics.totalDineIn}</p>
+              <p className="text-sm text-gray-500">Occupied Tables</p>
+              <p className="text-xl font-bold text-gray-800">{dashboardStats.occupiedTables}</p>
             </div>
-            <div className="bg-green-400 bg-opacity-30 p-3 rounded-full">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                />
-              </svg>
-            </div>
+            <FaChair className="text-red-500 text-2xl" />
           </div>
         </div>
-
-        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-sm p-6 text-white">
+        <div className="bg-white p-4 md:p-6 rounded-lg shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-purple-100 text-sm">Online Bookings</p>
-              <p className="text-3xl font-bold mt-1">{metrics.totalOnlineBookings}</p>
+              <p className="text-sm text-gray-500">Available Tables</p>
+              <p className="text-xl font-bold text-gray-800">{dashboardStats.availableTables}</p>
             </div>
-            <div className="bg-purple-400 bg-opacity-30 p-3 rounded-full">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
+            <FaChair className="text-green-500 text-2xl" />
+          </div>
+        </div>
+        <div className="bg-white p-4 md:p-6 rounded-lg shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Today's Revenue</p>
+              <p className="text-xl font-bold text-gray-800">{formatVND(paymentTotals.today)}</p>
             </div>
+            <FaMoneyBillWave className="text-green-500 text-2xl" />
           </div>
         </div>
       </div>
 
-      {/* Staff Working Today Section */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
-        <div className="p-6 border-b border-gray-100">
-          <h2 className="text-xl font-semibold text-gray-800">Staff Working Today</h2>
+      {/* Revenue Overview */}
+      <div className="grid md:grid-cols-3 gap-4">
+        <div className="bg-white p-4 md:p-6 rounded-lg shadow">
+          <h3 className="text-lg font-semibold text-gray-700">Today</h3>
+          <p className="text-2xl font-bold text-green-600">{formatVND(paymentTotals.today)}</p>
         </div>
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {clockInsData?.allClockIns
-              ?.filter((clockIn: ClockIn) => clockIn.status === 'active' && !clockIn.clockOut)
-              .map((clockIn: ClockIn) => {
-                const user = userData?.allUser?.find((u: any) => u.id === clockIn.userId);
-                return (
-                  <div
-                    key={clockIn.id}
-                    className="flex items-center space-x-3 bg-gray-50 p-3 rounded-lg"
-                  >
-                    <div className="bg-blue-100 rounded-full p-2">
-                      <svg
-                        className="w-5 h-5 text-blue-600"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+        <div className="bg-white p-4 md:p-6 rounded-lg shadow">
+          <h3 className="text-lg font-semibold text-gray-700">This Week</h3>
+          <p className="text-2xl font-bold text-blue-600">{formatVND(paymentTotals.week)}</p>
+        </div>
+        <div className="bg-white p-4 md:p-6 rounded-lg shadow">
+          <h3 className="text-lg font-semibold text-gray-700">This Month</h3>
+          <p className="text-2xl font-bold text-purple-600">{formatVND(paymentTotals.month)}</p>
+        </div>
+      </div>
+
+      {/* Tables Grid */}
+      <div className="bg-white p-4 md:p-6 rounded-lg shadow">
+        <h3 className="text-lg font-semibold text-gray-700 mb-4">Tables Status</h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 md:gap-4">
+          {tablesData?.allTable
+            .slice()
+            .sort((a: any, b: any) => a.id - b.id)
+            .map((table: any) => {
+              const latestBooking =
+                table.bookings && table.bookings.length > 0
+                  ? table.bookings[table.bookings.length - 1]
+                  : null;
+              const total = calculateTableTotal(table.bookings);
+              const paymentStatus = getPaymentStatus(table.bookings);
+              const bgColor =
+                table.status === 'available'
+                  ? 'bg-green-50'
+                  : table.status === 'occupied'
+                    ? 'bg-red-50'
+                    : 'bg-yellow-50';
+              const textColor =
+                table.status === 'available'
+                  ? 'text-green-600'
+                  : table.status === 'occupied'
+                    ? 'text-red-600'
+                    : 'text-yellow-600';
+
+              return (
+                <div key={table.id} className={`${bgColor} p-4 rounded-lg shadow-sm`}>
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="font-semibold text-gray-800">{table.number}</h4>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${textColor} bg-opacity-20`}
+                    >
+                      {table.status}
+                    </span>
+                  </div>
+                  <div className="text-sm text-gray-600">Room: {table.room}</div>
+                  {table.status === 'occupied' && latestBooking && total > 0 && (
+                    <>
+                      <div className="mt-2 font-medium text-gray-800">
+                        Total: {formatVND(total)}
+                      </div>
+                      <div
+                        className={`text-sm ${paymentStatus === 'paid' ? 'text-green-600' : 'text-red-600'}`}
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                        />
-                      </svg>
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">
-                        {user?.name || 'Staff Member'}
+                        {paymentStatus === 'paid' ? 'Paid' : 'Unpaid'}
                       </div>
-                      <div className="text-xs text-gray-500">
-                        Since {format(new Date(clockIn.clockIn), 'HH:mm')}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-          </div>
-        </div>
-      </div>
-
-      {/* Orders and Payment Status Section */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
-        <div className="p-6 border-b border-gray-100">
-          <h2 className="text-xl font-semibold text-gray-800">Orders & Payments</h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6">
-          {ordersData?.allOrders?.map((order: any) => (
-            <div key={order.id} className="bg-gray-50 rounded-lg p-4">
-              <div className="flex justify-between items-center mb-4">
-                <div className="text-sm font-medium text-gray-900">Order #{order.id}</div>
-                <span
-                  className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    order.payment === 'paid'
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-red-100 text-red-800'
-                  }`}
-                >
-                  {order.payment || 'unpaid'}
-                </span>
-              </div>
-              <div className="space-y-2">
-                {order.orderItems?.map((item: any) => (
-                  <div key={item.id} className="flex justify-between items-center text-sm">
-                    <div className="flex items-center">
-                      <span className="font-medium mr-2">{item.quantity}x</span>
-                      <span>{item.dish?.name || 'Unknown Dish'}</span>
-                    </div>
-                    <span>{formatAmount(item.price)}</span>
-                  </div>
-                ))}
-                <div className="pt-2 border-t border-gray-200 mt-2">
-                  <div className="flex justify-between items-center font-medium">
-                    <span>Total</span>
-                    <span>{formatAmount(order.total)}</span>
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1">Status: {order.status}</div>
+                    </>
+                  )}
                 </div>
-              </div>
-            </div>
-          ))}
+              );
+            })}
         </div>
       </div>
 
-      {/* Bookings Section */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-gray-100">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-800">Current Bookings</h2>
-            <span className="bg-purple-100 text-purple-800 text-xs font-medium px-3 py-1 rounded-full">
-              {bookingsData?.allBooking?.length || 0} Bookings
-            </span>
-          </div>
+      {/* Staff Activity */}
+      <div className="bg-white p-4 md:p-6 rounded-lg shadow">
+        <h3 className="text-lg font-semibold text-gray-700 mb-4">Today's Clock-ins</h3>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Username
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Clock In
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Clock Out
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Hours
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {todayClockIns.map((clockIn: any) => (
+                <tr key={clockIn.id}>
+                  <td className="px-4 py-3 text-sm text-gray-900">{clockIn.user.username}</td>
+                  <td className="px-4 py-3 text-sm text-gray-500">{formatTime(clockIn.clockIn)}</td>
+                  <td className="px-4 py-3 text-sm text-gray-500">
+                    {formatTime(clockIn.clockOut)}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-500">
+                    {calculateHoursWorked(clockIn.clockIn, clockIn.clockOut)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
-          {bookingsData?.allBooking?.map((booking: any) => (
-            <div
-              key={booking.id}
-              className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors"
-            >
-              <div className="flex items-center mb-4">
-                <div className="flex items-center">
-                  <div className="bg-purple-100 rounded-full p-2">
-                    <svg
-                      className="w-4 h-4 text-purple-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+      </div>
+
+      {/* Online Bookings */}
+      <div className="bg-white p-4 md:p-6 rounded-lg shadow">
+        <h3 className="text-lg font-semibold text-gray-700 mb-4">Online Bookings</h3>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Date
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Time
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Table
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Guests
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Status
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {onlineBookings.map((booking: any) => (
+                <tr key={booking.id}>
+                  <td className="px-4 py-3 text-sm text-gray-500">
+                    {formatDate(booking.reservationDate)}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-500">{booking.startSlot.startTime}</td>
+                  <td className="px-4 py-3 text-sm text-gray-500">
+                    {booking.table.number} ({booking.table.room})
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-500">{booking.peopleCount}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <span
+                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        booking.status === 'Confirmed'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                      />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <div className="text-sm font-medium text-gray-900">Guest</div>
-                    <div className="text-sm text-gray-500">
-                      {booking.phoneNumber || '0000000000'}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <div className="flex items-center text-sm">
-                  <svg
-                    className="w-4 h-4 text-gray-400 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                    />
-                  </svg>
-                  {booking.table
-                    ? `Table ${booking.table.number} (${booking.table.room})`
-                    : 'No table assigned'}
-                </div>
-                <div className="flex items-center text-sm">
-                  <svg
-                    className="w-4 h-4 text-gray-400 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                    />
-                  </svg>
-                  {booking.peopleCount} people
-                </div>
-                {booking.startSlot && (
-                  <div className="flex items-center text-sm">
-                    <svg
-                      className="w-4 h-4 text-gray-400 mr-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    {booking.startSlot.startTime} - {booking.startSlot.endTime}
-                  </div>
-                )}
-                <div className="flex items-center text-sm">
-                  <svg
-                    className="w-4 h-4 text-gray-400 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
-                    />
-                  </svg>
-                  {booking.customerNote || 'No notes'}
-                </div>
-              </div>
-            </div>
-          ))}
+                      {booking.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Order Status Distribution */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Order Status Distribution</h3>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={Object.entries(metrics.orderStatusDistribution).map(([status, count]) => ({
-                    name: status,
-                    value: count,
-                  }))}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                >
-                  {Object.entries(metrics.orderStatusDistribution).map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+      {/* Popular Items */}
+      <div className="bg-white p-4 md:p-6 rounded-lg shadow">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-700">Popular Items</h3>
+          <FaUtensils className="text-gray-400" />
         </div>
-
-        {/* Table Status Distribution */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Table Status Distribution</h3>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={[
-                    {
-                      name: 'Occupied',
-                      value:
-                        tablesData?.allTable?.filter((t: any) => t.status === 'occupied').length ||
-                        0,
-                    },
-                    {
-                      name: 'Available',
-                      value:
-                        tablesData?.allTable?.filter((t: any) => t.status === 'available').length ||
-                        0,
-                    },
-                  ]}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                >
-                  <Cell fill="#EF4444" />
-                  <Cell fill="#10B981" />
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Item
+                </th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                  Quantity
+                </th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                  Revenue
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {dashboardStats.popularItems.map(item => (
+                <tr key={item.id}>
+                  <td className="px-4 py-3 text-sm text-gray-900">{item.name}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900 text-right">{item.quantity}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                    {formatVND(item.revenue)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
