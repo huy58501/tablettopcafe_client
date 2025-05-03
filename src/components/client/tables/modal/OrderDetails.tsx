@@ -210,8 +210,8 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Available Dishes</h3>
               {(() => {
                 const dishesByCategory: { [category: string]: any[] } = {};
-                if (dishesData?.allDishes) {
-                  const sortedDishes = [...dishesData.allDishes].sort(
+                if (dishesData?.allActiveDishes) {
+                  const sortedDishes = [...dishesData.allActiveDishes].sort(
                     (a: any, b: any) => Number(a.id) - Number(b.id)
                   );
                   sortedDishes.forEach((dish: any) => {
@@ -332,8 +332,8 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
             <div className="flex-1 overflow-y-auto px-4 py-3 pb-20">
               {(() => {
                 const dishesByCategory: { [category: string]: any[] } = {};
-                if (dishesData?.allDishes) {
-                  const sortedDishes = [...dishesData.allDishes].sort(
+                if (dishesData?.allActiveDishes) {
+                  const sortedDishes = [...dishesData.allActiveDishes].sort(
                     (a: any, b: any) => Number(a.id) - Number(b.id)
                   );
                   sortedDishes.forEach((dish: any) => {

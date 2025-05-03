@@ -39,3 +39,27 @@ export const DELETE_DISH = gql`
     deleteDish(id: $id)
   }
 `;
+
+export const UPDATE_DISH_STATUS = gql`
+  mutation UpdateDishStatus($id: Int!, $isActive: Boolean!) {
+    updateDishStatus(id: $id, isActive: $isActive) {
+      id
+      name
+      price
+      category
+      isActive
+    }
+  }
+`;
+
+export const ALL_ACTIVE_DISHES = gql`
+  query AllActiveDishes {
+    allActiveDishes {
+      id
+      name
+      price
+      category
+      isActive
+    }
+  }
+`;

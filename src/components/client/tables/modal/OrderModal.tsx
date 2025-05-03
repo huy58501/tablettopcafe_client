@@ -16,7 +16,7 @@ import { gql, useMutation, useQuery } from '@apollo/client';
 import { CREATE_ORDER } from '@/services/orderServices';
 import { CREATE_BOOKING } from '@/services/bookingServices';
 import { GET_ALL_SLOTS } from '@/hooks/useAvailableSlots';
-import { ALL_DISHES } from '@/services/dishServices';
+import { ALL_ACTIVE_DISHES } from '@/services/dishServices';
 import { useTables } from '@/hooks/useTable';
 import SpinningModal from '@/components/UI/SpinningModal';
 
@@ -56,13 +56,13 @@ const OrderModal: React.FC<OrderModalProps> = ({
 
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { data: dishesData, loading: dishesLoading } = useQuery(ALL_DISHES);
+  const { data: dishesData, loading: dishesLoading } = useQuery(ALL_ACTIVE_DISHES);
 
   // Group dishes by category
   const dishesByCategory = React.useMemo(() => {
-    if (!dishesData?.allDishes) return {};
+    if (!dishesData?.allActiveDishes) return {};
 
-    return dishesData.allDishes.reduce((acc: Record<string, any[]>, dish: any) => {
+    return dishesData.allActiveDishes.reduce((acc: Record<string, any[]>, dish: any) => {
       const category = dish.category || 'Uncategorized';
       if (!acc[category]) {
         acc[category] = [];

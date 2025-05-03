@@ -25,23 +25,6 @@ import { useReservations } from '@/hooks/useReservations';
 import TableBooking from './TableBooking';
 import { useBookingNotifications } from '@/hooks/useBookingNotifications';
 
-// Booking interface
-interface Booking {
-  id: string;
-  customerName: string;
-  phoneNumber: string;
-  bookingType: string;
-  peopleCount: number;
-  reservationDate: string;
-  startSlot: {
-    startTime: string;
-  };
-  customerEmail: string | null;
-  customerNote: string;
-  status: string;
-  tableId: number;
-}
-
 // Extended OrderItem interface
 export interface ExtendedOrderItem extends OrderItem {
   name: string;
@@ -79,15 +62,32 @@ const Tables: React.FC = () => {
   const [peopleCount, setPeopleCount] = useState<number>(1);
   const [tempPeopleCount, setTempPeopleCount] = useState<string>('1');
   const [_splitBillData, setSplitBillData] = useState<any>(null);
-  const [_totalBill, setTotalBill] = useState<number>(0);
-  const { tablesData, tablesLoading, handleUpdateTableStatus, handleUpdateBookingTableChange } =
-    useTables();
+  const {
+    tablesData,
+    tablesLoading,
+    handleUpdateTableStatus,
+    handleUpdateBookingTableChange,
+    refetchTables,
+  } = useTables();
   const { handleUpdateOrderStatus, handleUpdateOrderPayment } = useUpdateOrderStatus();
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
   const { handleUpdateStatus } = useReservations();
   const [isTableChangeLoading, setIsTableChangeLoading] = useState(false);
   const { upcomingBookingNotification, setUpcomingBookingNotification } = useBookingNotifications();
   const [orderLoading, setOrderLoading] = useState(false);
+
+  // Add auto-refresh every 5 minutes
+  useEffect(() => {
+    const interval = setInterval(
+      () => {
+        refetchTables();
+      },
+      5 * 60 * 1000
+    ); // 5 minutes in milliseconds
+
+    // Cleanup interval on component unmount
+    return () => clearInterval(interval);
+  }, [refetchTables]);
 
   // Format currency to VND with thousands separators
   const formatCurrency = (amount: number) => {
@@ -105,7 +105,7 @@ const Tables: React.FC = () => {
           );
 
           // Get the latest order (pending or paid)
-          const latestBooking = pendingBooking || table.bookings?.[table.bookings.length - 1];
+          const latestBooking = pendingBooking;
 
           // A table is occupied if it has a pending order or its status is 'occupied'
           const effectiveStatus = pendingBooking ? 'occupied' : table.status;
@@ -151,14 +151,7 @@ const Tables: React.FC = () => {
         // If table is occupied and has orders, show the order details
         setIsOrderDetailsOpen(true);
       } else {
-        // If table is occupied but has no orders, treat it as available
-        handleUpdateTableStatus(table.id, 'available')
-          .then(() => {
-            setIsPeopleCountModalOpen(true);
-          })
-          .catch(error => {
-            console.error('Error updating table status:', error);
-          });
+        console.error('Table is occupied but has no orders');
       }
     }
   };

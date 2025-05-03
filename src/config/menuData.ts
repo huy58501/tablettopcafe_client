@@ -32,14 +32,22 @@ export const menuItemsAdmin = (username: string) => [
     href: `/${username}/inventory`,
   },
   {
-    label: 'Báo Cáo',
-    href: `/${username}/reports`,
+    label: 'Báo Cáo Sales',
+    href: `/${username}/sales-reports`,
+  },
+  {
+    label: 'Báo Cáo Lương',
+    href: `/${username}/salary-reports`,
   },
 ];
 
 export const menuItemsClient = (username: string) => [
   {
-    label: 'Quản Lý Đặt Bàn',
+    label: 'Ca Làm Việc',
+    href: `/${username}/shifts`,
+  },
+  {
+    label: 'Quản Lý Booking',
     href: `/${username}/table-reservations`,
   },
   {
@@ -49,10 +57,6 @@ export const menuItemsClient = (username: string) => [
   {
     label: 'Quản Lý Bếp',
     href: `/${username}/kitchen`,
-  },
-  {
-    label: 'Quản Lý Ca Làm Việc',
-    href: `/${username}/shifts`,
   },
   {
     label: 'Quản Lý Thực Đơn',
@@ -94,7 +98,11 @@ export const menuItemsAdminClientView = (username: string) => [
     href: `/${username}/inventory`,
   },
   {
-    label: 'Báo Cáo',
-    href: `/${username}/reports`,
+    label: 'Báo Cáo Sales',
+    href: `/${username}/sales-reports`,
+  },
+  {
+    label: 'Báo Cáo Lương',
+    href: `/${username}/salary-reports`,
   },
 ];

@@ -5,10 +5,21 @@ import { FiEdit, FiTrash2, FiPlus } from 'react-icons/fi';
 import DishFormModal from './Modal/DishFormModal';
 import ConfirmDialog from './Modal/ConfirmDialog';
 import SpinningModal from '@/components/UI/SpinningModal';
+import { UPDATE_DISH_STATUS, ALL_DISHES } from '@/services/dishServices';
+import { useMutation, useQuery } from '@apollo/client';
 
 export default function Dishes() {
-  const { dishesData, dishesLoading, dishesError, createDish, updateDish, deleteDish, refetch } =
-    useDishes();
+  const {
+    allDishes,
+    allDishesLoading,
+    allDishesError,
+    refetchAllDishes,
+    createDish,
+    updateDish,
+    deleteDish,
+  } = useDishes();
+  const [updateDishStatus, { loading: updateDishStatusLoading, error: updateDishStatusError }] =
+    useMutation(UPDATE_DISH_STATUS);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingDish, setEditingDish] = useState<Dish | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -18,9 +29,9 @@ export default function Dishes() {
 
   // Group dishes by category
   const dishesByCategory: { [category: string]: Dish[] } = {};
-  if (dishesData && dishesData.allDishes) {
+  if (allDishes && allDishes.allDishes) {
     // Sort dishes by id ascending
-    const sortedDishes = [...dishesData.allDishes].sort(
+    const sortedDishes = [...allDishes.allDishes].sort(
       (a: Dish, b: Dish) => Number(a.id) - Number(b.id)
     );
     sortedDishes.forEach((dish: Dish) => {
@@ -29,6 +40,17 @@ export default function Dishes() {
       dishesByCategory[cat].push(dish);
     });
   }
+
+  // Calculate totals for summary
+  const allDishesFlat = allDishes?.allDishes || [];
+  const totalDishes = allDishesFlat.length;
+  const activeDishes = allDishesFlat.filter((d: Dish) => d.isActive);
+  const inactiveDishes = allDishesFlat.filter((d: Dish) => !d.isActive);
+  const totalActive = activeDishes.length;
+  const totalInactive = inactiveDishes.length;
+  const sumActive = activeDishes.reduce((sum: number, d: Dish) => sum + (d.price || 0), 0);
+  const sumInactive = inactiveDishes.reduce((sum: number, d: Dish) => sum + (d.price || 0), 0);
+  const sumAll = allDishesFlat.reduce((sum: number, d: Dish) => sum + (d.price || 0), 0);
 
   // Handlers for CRUD
   const handleAdd = () => {
@@ -64,7 +86,7 @@ export default function Dishes() {
         });
       }
       setModalOpen(false);
-      await refetch();
+      await refetchAllDishes();
     } catch (err) {
       setActionError('Failed to save dish.');
     } finally {
@@ -78,7 +100,7 @@ export default function Dishes() {
     try {
       await deleteDish({ variables: { id: Number(deletingDish.id) } });
       setConfirmOpen(false);
-      await refetch();
+      await refetchAllDishes();
     } catch (err) {
       setActionError('Failed to delete dish.');
     } finally {
@@ -88,10 +110,26 @@ export default function Dishes() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-6 px-2 sm:px-4">
-      <SpinningModal isOpen={dishesLoading} message="Loading..." />
-      {dishesError && <div className="text-center text-red-500">Error loading dishes.</div>}
-
+      <SpinningModal isOpen={allDishesLoading} message="Loading..." />
+      <SpinningModal isOpen={updateDishStatusLoading} message="Updating status..." />
+      {allDishesError && <div className="text-center text-red-500">Error loading dishes.</div>}
       {actionError && <div className="text-center text-red-500">{actionError}</div>}
+
+      {/* Summary Section */}
+      <div className="mb-8 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-4xl mx-auto">
+        <div className="bg-white rounded-xl shadow p-4 flex flex-col items-center border border-gray-200">
+          <span className="text-lg font-semibold text-gray-700">Total Dishes</span>
+          <span className="text-2xl font-bold text-blue-700 mt-1">{totalDishes}</span>
+        </div>
+        <div className="bg-white rounded-xl shadow p-4 flex flex-col items-center border border-green-200">
+          <span className="text-lg font-semibold text-green-700">Active</span>
+          <span className="text-2xl font-bold text-green-600 mt-1">{totalActive}</span>
+        </div>
+        <div className="bg-white rounded-xl shadow p-4 flex flex-col items-center border border-gray-300">
+          <span className="text-lg font-semibold text-gray-500">Inactive</span>
+          <span className="text-2xl font-bold text-gray-400 mt-1">{totalInactive}</span>
+        </div>
+      </div>
 
       {/* Add Dish Floating Button */}
       <button
@@ -136,6 +174,40 @@ export default function Dishes() {
                 <p className="text-blue-600 font-bold text-lg mt-2">
                   {dish.price.toLocaleString()} ₫
                 </p>
+                {/* Status display */}
+                <span
+                  className={`mt-2 px-2 py-1 rounded text-xs font-bold ${dish.isActive ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-gray-100 text-gray-400 border border-gray-300'}`}
+                >
+                  {dish.isActive ? 'Active' : 'Inactive'}
+                </span>
+                {/* Toggle status button */}
+                <button
+                  className={`mt-3 px-4 py-2 rounded-lg text-sm font-semibold focus:outline-none transition-all duration-150 shadow-sm ${
+                    dish.isActive
+                      ? 'bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-300'
+                      : 'bg-green-500 text-white hover:bg-green-600 border border-green-600'
+                  }`}
+                  onClick={async () => {
+                    setActionLoading(true);
+                    setActionError(null);
+                    try {
+                      await updateDishStatus({
+                        variables: {
+                          id: Number(dish.id),
+                          isActive: !dish.isActive,
+                        },
+                      });
+                      await refetchAllDishes();
+                    } catch (err) {
+                      setActionError('Failed to update status.');
+                    } finally {
+                      setActionLoading(false);
+                    }
+                  }}
+                  disabled={actionLoading}
+                >
+                  {dish.isActive ? 'Set Inactive' : 'Set Active'}
+                </button>
               </div>
             ))}
           </div>
