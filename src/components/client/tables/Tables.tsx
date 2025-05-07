@@ -103,7 +103,7 @@ const Tables: React.FC = () => {
           const pendingBooking = table.bookings?.find(
             booking => booking.status === 'PENDING' && booking.order != null
           );
-          console.log('pedingBooking: ', pedingBooking);
+          console.log('pendingBooking: ', pendingBooking);
           // Get the latest order (pending or paid)
           const latestBooking = pendingBooking;
 
