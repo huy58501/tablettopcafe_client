@@ -98,24 +98,21 @@ const Tables: React.FC = () => {
     if (tablesData) {
       setOrderLoading(true);
       const mappedTables = tablesData.allTable
-      .sort((a: Table, b: Table) => a.id - b.id)
-      .map((table: Table) => {
-        const bookingWithOrder = table.bookings?.find(
-          booking => booking.order
-        );
-
-        const isOccupied = !!bookingWithOrder;
-        return {
-          ...table,
-          status: isOccupied ? 'occupied' : table.status,
-          orders: bookingWithOrder?.order
-            ? ({
-                ...bookingWithOrder.order,
-                orderItems: bookingWithOrder.order.orderItems || [],
-              } as ExtendedOrder)
-            : null,
-        };
-      });
+        .sort((a: Table, b: Table) => a.id - b.id)
+        .map((table: Table) => {
+          const bookingWithOrder = table.bookings?.find(booking => booking.order);
+          const isOccupied = !!bookingWithOrder;
+          return {
+            ...table,
+            status: isOccupied ? 'occupied' : table.status,
+            orders: bookingWithOrder?.order
+              ? ({
+                  ...bookingWithOrder.order,
+                  orderItems: bookingWithOrder.order.orderItems || [],
+                } as ExtendedOrder)
+              : null,
+          };
+        });
       console.log('mappedTable: ', mappedTables);
       setTables(mappedTables);
 
