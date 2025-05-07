@@ -98,30 +98,24 @@ const Tables: React.FC = () => {
     if (tablesData) {
       setOrderLoading(true);
       const mappedTables = tablesData.allTable
-        .map((table: Table) => {
-          // Find the latest pending order
-          const pendingBooking = table.bookings?.find(
-            booking => booking.order?.status === 'PENDING'
-          );
-          console.log('pendingBooking: ', pendingBooking);
-          // Get the latest order (pending or paid)
-          const latestBooking = pendingBooking;
+      .sort((a: Table, b: Table) => a.id - b.id)
+      .map((table: Table) => {
+        const bookingWithOrder = table.bookings?.find(
+          booking => booking.order
+        );
 
-          // A table is occupied if it has a pending order or its status is 'occupied'
-          const effectiveStatus = pendingBooking ? 'occupied' : table.status;
-          console.log('effectiveStatus: ', effectiveStatus);
-          return {
-            ...table,
-            status: effectiveStatus,
-            orders: latestBooking?.order
-              ? ({
-                  ...latestBooking.order,
-                  orderItems: latestBooking.order.orderItems || [],
-                } as ExtendedOrder)
-              : null,
-          };
-        })
-        .sort((a: TableWithOrders, b: TableWithOrders) => a.id - b.id);
+        const isOccupied = !!bookingWithOrder;
+        return {
+          ...table,
+          status: isOccupied ? 'occupied' : table.status,
+          orders: bookingWithOrder?.order
+            ? ({
+                ...bookingWithOrder.order,
+                orderItems: bookingWithOrder.order.orderItems || [],
+              } as ExtendedOrder)
+            : null,
+        };
+      });
       console.log('mappedTable: ', mappedTables);
       setTables(mappedTables);
 
@@ -566,9 +560,10 @@ const Tables: React.FC = () => {
                 >
                   {roomTables.map((table, index) => {
                     const statusInfo = getTableStatusInfo(table.status);
-                    const latestOrder = Array.isArray(table.orders) && table.orders.length > 0 
-                    ? table.orders[table.orders.length - 1] 
-                    : null;
+                    const latestOrder = 
+                      Array.isArray(table.orders) && table.orders.length > 0 
+                        ? table.orders[table.orders.length - 1] 
+                        : null;
                     return (
                       <motion.div
                         key={table.id}
