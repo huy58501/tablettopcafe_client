@@ -557,9 +557,9 @@ const Tables: React.FC = () => {
                 >
                   {roomTables.map((table, index) => {
                     const statusInfo = getTableStatusInfo(table.status);
-                    const latestOrder = 
-                      Array.isArray(table.orders) && table.orders.length > 0 
-                        ? table.orders[table.orders.length - 1] 
+                    const latestOrder =
+                      Array.isArray(table.orders) && table.orders.length > 0
+                        ? table.orders[table.orders.length - 1]
                         : null;
                     return (
                       <motion.div
