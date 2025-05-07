@@ -1,4 +1,4 @@
-import { Table, Order, OrderItem } from '@/types/table';
+rimport { Table, Order, OrderItem } from '@/types/table';
 import OrderModal from './modal/OrderModal';
 import OrderDetails from './modal/OrderDetails';
 import SplitBill, { FinalSplitData, SplitBillState } from './modal/SplitBill';
@@ -793,7 +793,7 @@ const Tables: React.FC = () => {
             onClick={e => handleOverlayClick(e, 'orderDetails')}
           >
             <OrderDetails
-              order={selectedTable.bookings.order}
+              order={selectedTable.bookings[bookings.length - 1].order}
               onClose={() => handleCloseModal('orderDetails')}
               onSplitBill={() => {
                 setIsOrderDetailsOpen(false);
@@ -811,7 +811,7 @@ const Tables: React.FC = () => {
             setIsLoading={setIsPaymentLoading}
             isOpen={isSplitBillOpen}
             onClose={() => handleCloseModal('splitBill')}
-            order={selectedTable.bookings.order}
+            order={selectedTable.bookings[bookings.length - 1].order}
             onConfirm={handleSplitBill}
           />
         )}
