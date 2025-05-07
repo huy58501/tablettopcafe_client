@@ -793,7 +793,7 @@ const Tables: React.FC = () => {
             onClick={e => handleOverlayClick(e, 'orderDetails')}
           >
             <OrderDetails
-              order={selectedTable.orders}
+              order={selectedTable.bookings.order}
               onClose={() => handleCloseModal('orderDetails')}
               onSplitBill={() => {
                 setIsOrderDetailsOpen(false);
@@ -811,7 +811,7 @@ const Tables: React.FC = () => {
             setIsLoading={setIsPaymentLoading}
             isOpen={isSplitBillOpen}
             onClose={() => handleCloseModal('splitBill')}
-            order={selectedTable.orders}
+            order={selectedTable.bookings.order}
             onConfirm={handleSplitBill}
           />
         )}
