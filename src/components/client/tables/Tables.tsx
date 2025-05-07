@@ -578,13 +578,13 @@ const Tables: React.FC = () => {
                             <div className="flex items-center space-x-2">
                               <FaUtensils className="text-gray-500" />
                               <span className="text-sm md:text-base text-gray-600">
-                                Orders: {latestOrder?.orderItems?.length || 0}
+                                Orders: {latestOrder?.order?.orderItems?.length || 0}
                               </span>
                             </div>
                             <div className="flex items-center space-x-2">
                               <FaMoneyBill className="text-gray-500" />
                               <span className="text-sm md:text-base text-gray-600">
-                                Total: {formatCurrency(latestOrder?.total || 0)}
+                                Total: {formatCurrency(latestOrder?.order?.total || 0)}
                               </span>
                             </div>
                           </div>
