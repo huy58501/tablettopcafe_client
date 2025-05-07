@@ -97,7 +97,7 @@ const Tables: React.FC = () => {
   useEffect(() => {
     if (tablesData) {
       setOrderLoading(true);
-      const mappedTables = tablesData.allTable
+      const mappedTables = [...tablesData.allTable]
         .sort((a: Table, b: Table) => a.id - b.id)
         .map((table: Table) => {
           const bookingWithOrder = table.bookings?.find(booking => booking.order);
