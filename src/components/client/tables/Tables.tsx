@@ -118,11 +118,12 @@ const Tables: React.FC = () => {
 
   const handleTableClick = (table: TableWithOrders) => {
     setSelectedTable(table);
-
+    console.log('table before if: ', table);
     if (table.status === 'available') {
       // If table is available, open the people count modal first
       setIsPeopleCountModalOpen(true);
     } else if (table.status === 'occupied') {
+      console.log('table after if: ', table);
       setIsOrderDetailsOpen(true);
     }
   };
