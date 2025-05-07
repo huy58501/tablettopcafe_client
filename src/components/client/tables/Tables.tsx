@@ -123,12 +123,7 @@ const Tables: React.FC = () => {
       // If table is available, open the people count modal first
       setIsPeopleCountModalOpen(true);
     } else if (table.status === 'occupied') {
-      if (table.order) {
-        // If table is occupied and has orders, show the order details
-        setIsOrderDetailsOpen(true);
-      } else {
-        console.error('Table is occupied but has no orders');
-      }
+      setIsOrderDetailsOpen(true);
     }
   };
 
