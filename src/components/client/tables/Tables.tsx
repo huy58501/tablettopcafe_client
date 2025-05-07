@@ -1,4 +1,4 @@
-rimport { Table, Order, OrderItem } from '@/types/table';
+import { Table, Order, OrderItem } from '@/types/table';
 import OrderModal from './modal/OrderModal';
 import OrderDetails from './modal/OrderDetails';
 import SplitBill, { FinalSplitData, SplitBillState } from './modal/SplitBill';
