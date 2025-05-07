@@ -122,7 +122,7 @@ const Tables: React.FC = () => {
           };
         })
         .sort((a: TableWithOrders, b: TableWithOrders) => a.id - b.id);
-
+      console.log('mappedTable: ', mappedTables);
       setTables(mappedTables);
 
       // Group tables by room
