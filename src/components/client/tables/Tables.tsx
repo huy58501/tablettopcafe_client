@@ -101,15 +101,15 @@ const Tables: React.FC = () => {
         .map((table: Table) => {
           // Find the latest pending order
           const pendingBooking = table.bookings?.find(
-            booking => booking.order?.status === 'PENDING'
+            booking => booking.status === 'PENDING' && booking.order != null
           );
-
+console.log("pedingBooking: ", pedingBooking);
           // Get the latest order (pending or paid)
           const latestBooking = pendingBooking;
 
           // A table is occupied if it has a pending order or its status is 'occupied'
           const effectiveStatus = pendingBooking ? 'occupied' : table.status;
-
+console.log("effectiveStatus: ", effectiveStatus);
           return {
             ...table,
             status: effectiveStatus,
