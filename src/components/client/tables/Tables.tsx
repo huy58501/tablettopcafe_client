@@ -97,7 +97,7 @@ const Tables: React.FC = () => {
   useEffect(() => {
     if (tablesData) {
       setOrderLoading(true);
-      const mappedTables = [...tablesData.allTable].sort((a: Table, b: Table) => a.id - b.id)
+      const mappedTables = [...tablesData.allTable].sort((a: Table, b: Table) => a.id - b.id);
       console.log('mappedTable: ', mappedTables);
       setTables(mappedTables);
 
