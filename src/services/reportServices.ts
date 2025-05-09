@@ -35,6 +35,7 @@ export const GET_REPORT = gql`
   query GetReport {
     allReport {
       id
+      userId
       date
       moneyIn
       moneyOut

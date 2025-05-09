@@ -8,7 +8,16 @@ import { GET_REPORT } from '../../../services/reportServices';
 import { GET_ALL_CLOCK_INS } from '../../../services/clockInServices';
 import { GET_ALL_USERS_WITH_EMPLOYMENT, GET_ALL_EMPLOYEES } from '../../../services/reportServices';
 import SpinningModal from '@/components/UI/SpinningModal';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, parseISO } from 'date-fns';
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  parseISO,
+  subMonths,
+  differenceInHours,
+  differenceInMinutes,
+} from 'date-fns';
 import { FaFileExcel, FaFilePdf, FaCalendar, FaChartLine } from 'react-icons/fa';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
@@ -70,6 +79,13 @@ const Reports = () => {
     qr: 0,
   });
 
+  const lastMonthStart = startOfMonth(subMonths(new Date(), 1));
+  const lastMonthEnd = endOfMonth(subMonths(new Date(), 1));
+
+  const [lastMonthRevenue, setLastMonthRevenue] = useState(0);
+
+  const [topWorker, setTopWorker] = useState<{ username: string; hours: number } | null>(null);
+
   const isLoading =
     ordersLoading ||
     bookingsLoading ||
@@ -106,69 +122,39 @@ const Reports = () => {
         totalRevenue += order.total;
         console.log(`Running Total Revenue: ${formatVND(totalRevenue)}`);
 
-        // Only count payment methods for paid orders
-        if (order.status === 'paid') {
-          console.log('Processing paid order payment:');
-          if (order.payment === 'Split Bill') {
-            console.log('Parsing split bill:', order.reference);
-
-            // Find all cash payments
-            const cashMatches = order.reference.match(/Tiền Mặt \+ ([\d,.]+)/g);
-            let totalCash = 0;
-            if (cashMatches) {
-              console.log('Found cash payments:', cashMatches);
-              cashMatches.forEach((match: string) => {
-                const amount = parseInt(match.split('+ ')[1].replace(/[.,]/g, ''));
-                console.log('Cash payment found:', formatVND(amount));
-                totalCash += amount;
-              });
-            }
-
-            // Find all QR payments
-            const qrMatches = order.reference.match(/Chuyển Khoản \+ ([\d,.]+)/g);
-            let totalQR = 0;
-            if (qrMatches) {
-              console.log('Found QR payments:', qrMatches);
-              qrMatches.forEach((match: string) => {
-                const amount = parseInt(match.split('+ ')[1].replace(/[.,]/g, ''));
-                console.log('QR payment found:', formatVND(amount));
-                totalQR += amount;
-              });
-            }
-
-            console.log(
-              `Total split bill - Cash: ${formatVND(totalCash)}, QR: ${formatVND(totalQR)}`
-            );
-            cashTotal += totalCash;
-            qrTotal += totalQR;
-
-            // Verify total matches
-            const splitTotal = totalCash + totalQR;
-            if (splitTotal !== order.total) {
-              console.warn(
-                `Split bill total (${formatVND(splitTotal)}) doesn't match order total (${formatVND(order.total)})`
-              );
-            }
-          } else if (order.payment === 'Tiền Mặt') {
-            cashTotal += order.total;
-            console.log(`Added to Cash Total: ${formatVND(order.total)}`);
-          } else if (order.payment === 'Chuyển Khoản') {
-            qrTotal += order.total;
-            console.log(`Added to QR Total: ${formatVND(order.total)}`);
+        // Always parse the reference for split payments, even if payment !== 'Split Bill'
+        let splitCash = 0;
+        let splitQR = 0;
+        if (order.reference) {
+          // Parse all cash payments
+          const cashMatches = order.reference.match(/Tiền Mặt \+ ([\d,.]+)/g);
+          if (cashMatches) {
+            cashMatches.forEach((match: string) => {
+              const amount = parseInt(match.split('+ ')[1].replace(/[.,]/g, ''));
+              splitCash += amount;
+            });
           }
-          console.log(`Running Cash Total: ${formatVND(cashTotal)}`);
-          console.log(`Running QR Total: ${formatVND(qrTotal)}`);
-        } else {
-          console.log('Order not paid - not counting in payment totals');
+          // Parse all QR payments
+          const qrMatches = order.reference.match(/Chuyển Khoản \+ ([\d,.]+)/g);
+          if (qrMatches) {
+            qrMatches.forEach((match: string) => {
+              const amount = parseInt(match.split('+ ')[1].replace(/[.,]/g, ''));
+              splitQR += amount;
+            });
+          }
         }
+        // If split bill found, add those, otherwise fall back to main payment type
+        if (splitCash > 0 || splitQR > 0) {
+          cashTotal += splitCash;
+          qrTotal += splitQR;
+        } else if (order.payment === 'Tiền Mặt') {
+          cashTotal += order.total;
+        } else if (order.payment === 'Chuyển Khoản') {
+          qrTotal += order.total;
+        }
+        console.log(`Running Cash Total: ${formatVND(cashTotal)}`);
+        console.log(`Running QR Total: ${formatVND(qrTotal)}`);
       });
-
-      console.log('\n--- Final Totals ---');
-      console.log(`Total Revenue: ${formatVND(totalRevenue)}`);
-      console.log(`Total Cash Payments: ${formatVND(cashTotal)}`);
-      console.log(`Total QR Payments: ${formatVND(qrTotal)}`);
-      console.log(`Sum of Payments: ${formatVND(cashTotal + qrTotal)}`);
-      console.log(`Unpaid Amount: ${formatVND(totalRevenue - (cashTotal + qrTotal))}`);
 
       setPaymentSummary({
         cash: cashTotal,
@@ -246,8 +232,46 @@ const Reports = () => {
           .sort((a, b) => b.quantity - a.quantity)
           .slice(0, 10)
       );
+
+      // Calculate last month's total revenue (paid orders only)
+      const lastMonthOrders = ordersData.allOrders.filter((order: any) => {
+        const orderDate = new Date(order.createdAt);
+        return orderDate >= lastMonthStart && orderDate <= lastMonthEnd && order.status === 'paid';
+      });
+      const lastMonthTotal = lastMonthOrders.reduce(
+        (sum: number, order: any) => sum + order.total,
+        0
+      );
+      setLastMonthRevenue(lastMonthTotal);
     }
-  }, [ordersData, dateRange]);
+    // Calculate top worker for this month
+    if (clockInData?.allClockIns) {
+      // Get current month range
+      const now = new Date();
+      const monthStart = startOfMonth(now);
+      const monthEnd = endOfMonth(now);
+      // Aggregate hours per user
+      const userHours: Record<string, { username: string; hours: number }> = {};
+      clockInData.allClockIns.forEach((ci: any) => {
+        const clockIn = new Date(ci.clockIn);
+        const clockOut = ci.clockOut ? new Date(ci.clockOut) : new Date();
+        // Only count if clockIn is in this month
+        if (clockIn >= monthStart && clockIn <= monthEnd) {
+          const diff = differenceInMinutes(clockOut, clockIn) / 60;
+          if (!userHours[ci.userId]) {
+            userHours[ci.userId] = { username: ci.user.username, hours: 0 };
+          }
+          userHours[ci.userId].hours += diff;
+        }
+      });
+      // Find top worker
+      let top: { username: string; hours: number } | null = null;
+      Object.values(userHours).forEach(u => {
+        if (!top || u.hours > top.hours) top = u;
+      });
+      setTopWorker(top);
+    }
+  }, [ordersData, dateRange, clockInData]);
 
   const handleExportExcel = () => {
     // Prepare data for export
@@ -460,8 +484,44 @@ const Reports = () => {
         </div>
       </div>
 
+      {/* Revenue Summary Row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        {/* Total Revenue */}
+        <div className="bg-gradient-to-br from-yellow-100 to-yellow-300 p-6 rounded-2xl shadow flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <FaChartLine className="text-yellow-500 text-4xl" />
+            <div>
+              <div className="text-base font-medium text-yellow-700">Total Revenue</div>
+              <div className="text-3xl md:text-4xl font-bold text-yellow-900">
+                {formatVND(summary.totalRevenue)}
+              </div>
+            </div>
+          </div>
+          <div className="hidden md:block text-right">
+            <div className="text-xs text-yellow-700 font-medium">For selected date range</div>
+          </div>
+        </div>
+        {/* Last Month Revenue */}
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-2xl shadow flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <FaChartLine className="text-blue-400 text-4xl" />
+            <div>
+              <div className="text-base font-medium text-blue-700">Last Month Revenue</div>
+              <div className="text-3xl md:text-4xl font-bold text-blue-900">
+                {formatVND(lastMonthRevenue)}
+              </div>
+            </div>
+          </div>
+          <div className="hidden md:block text-right">
+            <div className="text-xs text-blue-600 font-medium">
+              {format(lastMonthStart, 'MMM yyyy')}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Payment Method Summary */}
-      <div className="bg-white p-4 rounded-lg shadow">
+      <div className="bg-white p-4 rounded-lg shadow mb-6">
         <h2 className="text-lg font-semibold text-gray-700 mb-4">Payment Methods</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-green-50 p-4 rounded-lg">
@@ -480,26 +540,29 @@ const Reports = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-lg shadow">
-          <h3 className="text-sm font-medium text-gray-500">Total Revenue</h3>
-          <p className="mt-1 text-2xl font-semibold text-gray-900">
-            {formatVND(summary.totalRevenue)}
-          </p>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div className="bg-white p-6 rounded-xl shadow h-full flex flex-col justify-center">
+          <h3 className="text-sm font-medium text-gray-500 mb-2">Total Orders</h3>
+          <p className="text-2xl font-bold text-gray-900">{summary.totalOrders}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <h3 className="text-sm font-medium text-gray-500">Total Orders</h3>
-          <p className="mt-1 text-2xl font-semibold text-gray-900">{summary.totalOrders}</p>
+        <div className="bg-white p-6 rounded-xl shadow h-full flex flex-col justify-center">
+          <h3 className="text-sm font-medium text-gray-500 mb-2">Average Order Value</h3>
+          <p className="text-2xl font-bold text-gray-900">{formatVND(summary.averageOrderValue)}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <h3 className="text-sm font-medium text-gray-500">Average Order Value</h3>
-          <p className="mt-1 text-2xl font-semibold text-gray-900">
-            {formatVND(summary.averageOrderValue)}
-          </p>
+        <div className="bg-white p-6 rounded-xl shadow h-full flex flex-col justify-center">
+          <h3 className="text-sm font-medium text-gray-500 mb-2">Top Payment Method</h3>
+          <p className="text-2xl font-bold text-gray-900">{summary.topPaymentMethod}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <h3 className="text-sm font-medium text-gray-500">Top Payment Method</h3>
-          <p className="mt-1 text-2xl font-semibold text-gray-900">{summary.topPaymentMethod}</p>
+        <div className="bg-white p-6 rounded-xl shadow h-full flex flex-col justify-center">
+          <h3 className="text-sm font-medium text-gray-500 mb-2">Work Hard This Month</h3>
+          {topWorker ? (
+            <>
+              <p className="text-2xl font-bold text-blue-700">{topWorker.username}</p>
+              <p className="text-xs text-gray-500">{topWorker.hours.toFixed(1)} hours</p>
+            </>
+          ) : (
+            <p className="text-gray-400">No data</p>
+          )}
         </div>
       </div>
 

@@ -44,7 +44,7 @@ export const menuItemsAdmin = (username: string) => [
 export const menuItemsClient = (username: string) => [
   {
     label: 'Ca Làm Việc',
-    href: `/${username}/shifts`,
+    href: `/${username}/shift`,
   },
   {
     label: 'Quản Lý Booking',

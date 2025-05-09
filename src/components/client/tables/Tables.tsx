@@ -39,8 +39,6 @@ export interface TableWithOrders extends Table {
 // Extended Order type to include additional properties needed for the UI
 export interface ExtendedOrder extends Order {
   orderItems: ExtendedOrderItem[];
-  customerName?: string;
-  customerNote?: string;
 }
 
 // Group tables by room
@@ -98,7 +96,6 @@ const Tables: React.FC = () => {
     if (tablesData) {
       setOrderLoading(true);
       const mappedTables = [...tablesData.allTable].sort((a: Table, b: Table) => a.id - b.id);
-      console.log('mappedTable: ', mappedTables);
       setTables(mappedTables);
 
       // Group tables by room
@@ -118,13 +115,19 @@ const Tables: React.FC = () => {
 
   const handleTableClick = (table: TableWithOrders) => {
     setSelectedTable(table);
-    console.log('table before if: ', table);
     if (table.status === 'available') {
-      // If table is available, open the people count modal first
       setIsPeopleCountModalOpen(true);
     } else if (table.status === 'occupied') {
-      console.log('table after if: ', table);
-      setIsOrderDetailsOpen(true);
+      // Find the latest booking with an order
+      const latestBooking =
+        table.bookings && table.bookings.length > 0
+          ? table.bookings[table.bookings.length - 1]
+          : null;
+      if (latestBooking && latestBooking.order) {
+        setIsOrderDetailsOpen(true);
+      } else {
+        console.log('No order found in latest booking');
+      }
     }
   };
 
@@ -277,8 +280,9 @@ const Tables: React.FC = () => {
         setIsPeopleCountModalOpen(false);
         break;
       case 'orderDetails':
-        // Just close the modal, preserve the order data
+        // Close the modal and refresh table data
         setIsOrderDetailsOpen(false);
+        refetchTables();
         break;
       case 'splitBill':
         // If split bill is cancelled, just close the modal and preserve order data
@@ -333,21 +337,28 @@ const Tables: React.FC = () => {
   }) => {
     setIsPaymentLoading(true);
     try {
+      // Get the latest booking's order total
+      const latestBooking = selectedTable?.bookings[selectedTable.bookings.length - 1];
+      const orderTotal = latestBooking?.order?.total || 0;
+
       // Update the order status to 'paid'
-      if (paymentData.amount === selectedTable?.orders?.total) {
+      if (paymentData.amount === orderTotal) {
         await handleUpdateOrderPayment(
-          selectedTable?.orders?.id || 0,
+          latestBooking?.order?.id || 0,
           paymentData.paymentMethod,
           paymentData.reference
         );
-        await handleUpdateOrderStatus(selectedTable?.orders?.id || 0, 'paid');
+        await handleUpdateOrderStatus(latestBooking?.order?.id || 0, 'paid');
         await handleUpdateTableStatus(selectedTable?.id || 0, 'available');
-        await handleUpdateStatus(
-          selectedTable?.bookings[selectedTable?.bookings.length - 1]?.id.toString() || '0',
-          'Confirmed'
-        );
+        await handleUpdateStatus(latestBooking?.id.toString() || '0', 'Confirmed');
+        setIsOrderDetailsOpen(false);
       } else {
-        console.error('Payment amount is incorrect');
+        console.error(
+          'Payment amount is incorrect. Expected:',
+          orderTotal,
+          'Received:',
+          paymentData.amount
+        );
       }
     } catch (error) {
       console.error('Payment processing error:', error);
@@ -574,13 +585,17 @@ const Tables: React.FC = () => {
                             <div className="flex items-center space-x-2">
                               <FaUtensils className="text-gray-500" />
                               <span className="text-sm md:text-base text-gray-600">
-                                Orders: {latestOrder?.order?.orderItems?.length || 0}
+                                {table.status === 'occupied'
+                                  ? `Orders: ${latestOrder?.order?.orderItems?.length}`
+                                  : 'Orders: 0'}
                               </span>
                             </div>
                             <div className="flex items-center space-x-2">
                               <FaMoneyBill className="text-gray-500" />
                               <span className="text-sm md:text-base text-gray-600">
-                                Total: {formatCurrency(latestOrder?.order?.total || 0)}
+                                {table.status === 'occupied'
+                                  ? `Total: ${formatCurrency(latestOrder?.order?.total || 0)}`
+                                  : 'Total: 0'}
                               </span>
                             </div>
                           </div>
@@ -787,34 +802,43 @@ const Tables: React.FC = () => {
         )}
 
         {/* Order Details Modal */}
-        {isOrderDetailsOpen && selectedTable && selectedTable.orders && (
-          <div
-            className="fixed inset-0 bg-gray-800/80 flex items-center justify-center z-50 p-4"
-            onClick={e => handleOverlayClick(e, 'orderDetails')}
-          >
-            <OrderDetails
-              order={selectedTable.bookings[bookings.length - 1].order}
-              onClose={() => handleCloseModal('orderDetails')}
-              onSplitBill={() => {
-                setIsOrderDetailsOpen(false);
-                setIsSplitBillOpen(true);
-              }}
-              onConfirm={handlePaymentConfirm}
-              onTableChange={handleTableChange}
-            />
-          </div>
-        )}
+        {isOrderDetailsOpen &&
+          selectedTable &&
+          selectedTable.bookings &&
+          selectedTable.bookings.length > 0 && (
+            <div
+              className="fixed inset-0 bg-gray-800/80 flex items-center justify-center z-50 p-4"
+              onClick={e => handleOverlayClick(e, 'orderDetails')}
+            >
+              <OrderDetails
+                order={
+                  selectedTable.bookings[selectedTable.bookings.length - 1].order as ExtendedOrder
+                }
+                onClose={() => handleCloseModal('orderDetails')}
+                onSplitBill={() => {
+                  setIsSplitBillOpen(true);
+                }}
+                onConfirm={handlePaymentConfirm}
+                onTableChange={handleTableChange}
+              />
+            </div>
+          )}
 
         {/* Split Bill Modal */}
-        {isSplitBillOpen && selectedTable && selectedTable.orders && (
-          <SplitBill
-            setIsLoading={setIsPaymentLoading}
-            isOpen={isSplitBillOpen}
-            onClose={() => handleCloseModal('splitBill')}
-            order={selectedTable.bookings[bookings.length - 1].order}
-            onConfirm={handleSplitBill}
-          />
-        )}
+        {isSplitBillOpen &&
+          selectedTable &&
+          selectedTable.bookings &&
+          selectedTable.bookings.length > 0 && (
+            <SplitBill
+              setIsLoading={setIsPaymentLoading}
+              isOpen={isSplitBillOpen}
+              onClose={() => handleCloseModal('splitBill')}
+              order={
+                selectedTable.bookings[selectedTable.bookings.length - 1].order as ExtendedOrder
+              }
+              onConfirm={handleSplitBill}
+            />
+          )}
       </div>
     </div>
   );
