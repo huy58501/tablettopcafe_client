@@ -74,7 +74,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   }; 
 
   const handleSubmitBlocked = () => {
-    console.log("Save Change is Blocked);
+    console.log("Save Change is Blocked");
   };
 
   return (
