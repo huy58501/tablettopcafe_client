@@ -71,6 +71,10 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         newPassword: editUser.newPassword,
       }),
     });
+  }; 
+
+  const handleSubmitBlocked = () => {
+    console.log("Save Change is Blocked);
   };
 
   return (
@@ -250,7 +254,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={handleSubmit}
+                    onClick={handleSubmitBlocked}
                     disabled={
                       isEditing ||
                       (editUser.isChangingPassword &&
