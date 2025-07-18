@@ -362,14 +362,14 @@ const AccountPage: React.FC = () => {
                           >
                             <FiEdit2 className="w-5 h-5" />
                           </button>
-                          <button
+                          {* <button
                             onClick={e => {
                               e.stopPropagation();
                               handleDelete(user);
                             }}
                             className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-150 cursor-pointer"
                             title="Delete User"
-                          >
+                          > *}
                             <FiTrash2 className="w-5 h-5" />
                           </button>
                           <div className="p-2 text-gray-400 group-hover:text-gray-600 transition-colors duration-150">
