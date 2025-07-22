@@ -71,10 +71,10 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         newPassword: editUser.newPassword,
       }),
     });
-  }; 
+  };
 
   const handleSubmitBlocked = () => {
-    console.log("Save Change is Blocked");
+    console.log('Save Change is Blocked');
   };
 
   return (
